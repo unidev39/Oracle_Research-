@@ -19,7 +19,6 @@ AS
    -- Declaration a function with record data type in return part
    FUNCTION fn_test
    (    
-     a_pan             VARCHAR2,
      a_business_sno    NUMBER,
      a_master_sno      NUMBER,
      a_add_of          VARCHAR2,
@@ -35,7 +34,6 @@ CREATE OR REPLACE PACKAGE BODY PKG_TEST
 AS
   FUNCTION fn_test
   (    
-    a_pan             VARCHAR2,
     a_business_sno    NUMBER,
     a_master_sno      NUMBER,
     a_add_of          VARCHAR2,
@@ -61,10 +59,9 @@ AS
                 NVL(a.pobox,' ')
                 INTO tpadd		  
            FROM 
-                ctb_addresses a, ctb_bus_per_addresses b
+                addresses a, bus_per_addresses b
            WHERE     
                 a.address_no = b.address_no
-           AND b.pan = a_pan
            AND b.business_sno = a_business_sno
            AND b.bus_per_sno = a_master_sno
            AND b.bus_per_type = a_add_of
@@ -104,7 +101,7 @@ END PKG_TEST;
 DECLARE
     x  pkg_test.addrec;
 BEGIN
-    x := pkg_test.fn_test('2000',1000,1,'A','B');
+    x := pkg_test.fn_test(1000,1,'A','B');
     dbms_output.put_line(x.wardno||','||x.houseno||','||x.streetname||','||x.vdctown||','||x.location_type||','||x.district_code||','||x.area_code||','||x.telephone||','||x.fax||','||x.email||','||x.pobox);
 END;
 /
