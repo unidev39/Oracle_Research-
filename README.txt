@@ -10,7 +10,7 @@ Nepal. formerly known as Verisk Information Technologies Pvt. Ltd. This role req
 study, requirements study, design, development, testing and implementation, as well as rendering application enhancement 
 support to the client; write fine-tuned PL/SQL scripts, Perl/Shell scripts as per the business requirement especially for 
 Medical Intelligence Software; contribute to the development of physical & logical architecture diagrams including testing, 
-troubleshooting & debugging of the software.
+troubleshooting & debugging of the software. 
 
 Thank You,
 Devesh Kumar Shrivastav
