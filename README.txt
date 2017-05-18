@@ -10,7 +10,7 @@ Medical Intelligence Software; contribute to the development of physical & logic
 Thank You,
 Devesh Kumar Shrivastav
 Senior Software Engineer - OCA/OCP in 9i,10g,11g and upgraded with 12c.
-(Oracle DBA / Oracle PL/SQL Developer / Instructor -> Oracle PL/SQL,Unix Shell/Perl Scripting)
+(Oracle DBA / Oracle PL/SQL Developer / Instructor(Online) -> Oracle PL/SQL,Unix Shell/Perl Scripting)
 Mobile No: 00977-9841435006
 Skype ID : unidev392
 Email ID : unidev39@gmail.com
