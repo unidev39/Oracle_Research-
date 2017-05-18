@@ -1,5 +1,7 @@
+-- Create a package with record data type
 CREATE OR REPLACE PACKAGE PKG_TEST 
 AS
+   -- Declaration of record data type in package specification part
    TYPE addrec IS RECORD
    (
       wardno          NUMBER(2),
@@ -14,6 +16,7 @@ AS
       email           VARCHAR2(60),
       pobox           VARCHAR2(20)
    );
+   -- Declaration a function with record data type in return part
    FUNCTION fn_test
    (    
      a_pan             VARCHAR2,
@@ -27,7 +30,7 @@ AS
 
 END PKG_TEST;
 /
-
+-- Create a package with use of record data type
 CREATE OR REPLACE PACKAGE BODY PKG_TEST
 AS
   FUNCTION fn_test
@@ -40,6 +43,7 @@ AS
   ) 
   RETURN addrec
   IS
+      -- Declaration a variable as record data type
       tpadd             addrec;
   BEGIN
         BEGIN
@@ -96,11 +100,11 @@ AS
   END FN_TEST;
 END PKG_TEST;
 /
-
+-- To execute the package 
 DECLARE
     x  pkg_test.addrec;
 BEGIN
-    x := pkg_test.fn_test('300010462',20000628160430,1,'CH','M');
+    x := pkg_test.fn_test('2000',1000,1,'A','B');
     dbms_output.put_line(x.wardno||','||x.houseno||','||x.streetname||','||x.vdctown||','||x.location_type||','||x.district_code||','||x.area_code||','||x.telephone||','||x.fax||','||x.email||','||x.pobox);
 END;
 /
