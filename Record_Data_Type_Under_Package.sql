@@ -1,4 +1,4 @@
--- Create a package with record data type
+-- Create a Package with record datatype
 CREATE OR REPLACE PACKAGE PKG_TEST 
 AS
    -- Declaration of record data type in package specification part
@@ -47,6 +47,7 @@ AS
       tpadd             addrec;
   BEGIN
         BEGIN
+	   -- Using oracle hint to put that query in Index Range Scan
            SELECT /*+ INDEX(a) INDEX(b) */
                 NVL(a.ward_no,0),
                 NVL(a.house_no,' '),
@@ -59,31 +60,19 @@ AS
                 NVL(a.fax,' '),
                 NVL(a.email,' '),
                 NVL(a.pobox,' ')
-                INTO tpadd		  
+                INTO tpadd          
            FROM 
-                addresses a, bus_per_addresses b
+                addresses a, per_addresses b
            WHERE     
-                a.address_no = b.address_no
-	   AND a.user_id = a_user_id
+               a.address_no = b.address_no
+           AND b.pan = a_pan
            AND b.business_sno = a_business_sno
            AND b.bus_per_sno = a_master_sno
            AND b.bus_per_type = a_add_of
            AND b.address_type = a_add_type
            AND TRIM(a.expiry_date) IS NULL;
-		   
-        EXCEPTION WHEN NO_DATA_FOUND THEN
-              tpadd.wardno := 0;
-              tpadd.houseno := ' ';
-              tpadd.streetname := ' ';
-              tpadd.vdctown := ' ';
-              tpadd.location_type := ' ';
-              tpadd.district_code := ' ';
-              tpadd.area_code := ' ';
-              tpadd.telephone := ' ';
-              tpadd.fax := ' ';
-              tpadd.email := ' ';
-              tpadd.pobox := ' ';
-           WHEN TOO_MANY_ROWS THEN
+        -- Handle Two exception in single usin OR operator   
+        EXCEPTION WHEN NO_DATA_FOUND OR TOO_MANY_ROWS THEN
               tpadd.wardno := 0;
               tpadd.houseno := ' ';
               tpadd.streetname := ' ';
@@ -104,8 +93,7 @@ END PKG_TEST;
 DECLARE
     x  pkg_test.addrec;
 BEGIN
-    x := pkg_test.fn_test(2000,1000,1,'A','B');
+    x := pkg_test.fn_test(100,20,10,'A','B');
     dbms_output.put_line(x.wardno||','||x.houseno||','||x.streetname||','||x.vdctown||','||x.location_type||','||x.district_code||','||x.area_code||','||x.telephone||','||x.fax||','||x.email||','||x.pobox);
 END;
-/
-		 
+/	 
