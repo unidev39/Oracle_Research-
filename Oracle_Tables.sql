@@ -272,3 +272,13 @@ SELECT 5 col_1, 'DATA4' col_2 FROM DUAL;
 SELECT * FROM gtb_table_name_session;
 
 COMMIT;
+	
+CREATE GLOBAL TEMPORARY TABLE gtb_table_name_session_emp
+ON COMMIT PRESERVE ROWS
+AS
+SELECT * FROM employees;
+
+SELECT * FROM gtb_table_name_session_emp;
+
+COMMIT;
+
