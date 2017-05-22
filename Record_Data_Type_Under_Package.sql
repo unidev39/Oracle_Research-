@@ -65,7 +65,7 @@ AS
                 addresses a, per_addresses b
            WHERE     
                a.address_no = b.address_no
-           AND b.pan = a_pan
+           AND b.user_id = a_user_id
            AND b.business_sno = a_business_sno
            AND b.bus_per_sno = a_master_sno
            AND b.bus_per_type = a_add_of
