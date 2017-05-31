@@ -311,3 +311,262 @@ FROM
       user_cons_columns
 where
        table_name = 'EMPLOYEES';
+       
+-----------------------------------------------------------------------------
+--Error Ocuring while Object structure created with check constraint
+--Step 1
+DROP TABLE test_check_constraint CASCADE CONSTRAINTS;
+CREATE TABLE test_check_constraint
+(
+ col_1  NUMBER CHECK(col_1 >100)
+);
+ 
+-- Verification script
+SELECT 
+     constraint_name,
+     constraint_type,
+     table_name,
+     search_condition,
+     status,
+     validated,
+     last_change 
+FROM 
+     user_constraints 
+WHERE 
+     table_name = 'TEST_CHECK_CONSTRAINT';
+/*
+CONSTRAINT_NAME CONSTRAINT_TYPE TABLE_NAME            SEARCH_CONDITION STATUS  VALIDATED LAST_CHANGE
+--------------- --------------- --------------------- ---------------- ------- --------- -------------------  
+SYS_C0011329    C               TEST_CHECK_CONSTRAINT col_1 >100       ENABLED VALIDATED 31.05.2017 18:24:11
+*/
+
+-- Object structure 
+PROMPT CREATE TABLE test_check_constraint
+CREATE TABLE test_check_constraint (
+  col_1 NUMBER NULL
+)
+  STORAGE (
+    NEXT       1024 K
+  )
+/
+
+PROMPT ALTER TABLE test_check_constraint ADD CHECK
+ALTER TABLE test_check_constraint
+  ADD CHECK (
+    col_1 >100
+  )
+/
+
+--Step 2
+ALTER TABLE test_check_constraint MODIFY CHECK(col_1 >1000);
+
+PROMPT CREATE TABLE test_check_constraint
+CREATE TABLE test_check_constraint (
+  col_1 NUMBER NULL
+)
+/
+
+PROMPT ALTER TABLE test_check_constraint ADD CHECK
+ALTER TABLE test_check_constraint
+  ADD CHECK (
+    col_1 >100
+  )
+/
+
+PROMPT ALTER TABLE test_check_constraint ADD CHECK
+ALTER TABLE test_check_constraint
+  ADD CHECK (
+    col_1 >1000
+  )
+/
+
+-- Verification script
+SELECT 
+     constraint_name,
+     constraint_type,
+     table_name,
+     search_condition,
+     status,
+     validated,
+     last_change 
+FROM 
+     user_constraints 
+WHERE 
+     table_name = 'TEST_CHECK_CONSTRAINT';
+/*
+CONSTRAINT_NAME CONSTRAINT_TYPE TABLE_NAME            SEARCH_CONDITION STATUS  VALIDATED LAST_CHANGE
+--------------- --------------- --------------------  ---------------- ------- --------- -------------------        
+SYS_C0011335    C               TEST_CHECK_CONSTRAINT col_1 >100       ENABLED VALIDATED 31.05.2017 18:29:11
+SYS_C0011336    C               TEST_CHECK_CONSTRAINT col_1 >1000      ENABLED VALIDATED 31.05.2017 18:29:34
+*/
+
+
+--Step 3
+ALTER TABLE test_check_constraint MODIFY CHECK(col_1 <1000);
+
+PROMPT CREATE TABLE test_check_constraint
+CREATE TABLE test_check_constraint (
+  col_1 NUMBER NULL
+)
+/
+
+PROMPT ALTER TABLE test_check_constraint ADD CHECK
+ALTER TABLE test_check_constraint
+  ADD CHECK (
+    col_1 <1000
+  )
+/
+
+PROMPT ALTER TABLE test_check_constraint ADD CHECK
+ALTER TABLE test_check_constraint
+  ADD CHECK (
+    col_1 >100
+  )
+/
+
+PROMPT ALTER TABLE test_check_constraint ADD CHECK
+ALTER TABLE test_check_constraint
+  ADD CHECK (
+    col_1 >1000
+  )
+/
+
+-- Verification script
+SELECT 
+     constraint_name,
+     constraint_type,
+     table_name,
+     search_condition,
+     status,
+     validated,
+     last_change 
+FROM 
+     user_constraints 
+WHERE 
+     table_name = 'TEST_CHECK_CONSTRAINT';
+/*
+CONSTRAINT_NAME CONSTRAINT_TYPE TABLE_NAME            SEARCH_CONDITION STATUS  VALIDATED LAST_CHANGE
+--------------- --------------- --------------------- ---------------- ------- --------- -------------------  
+SYS_C0011335    C               TEST_CHECK_CONSTRAINT col_1 >100       ENABLED VALIDATED 31.05.2017 18:29:11
+SYS_C0011336    C               TEST_CHECK_CONSTRAINT col_1 >1000      ENABLED VALIDATED 31.05.2017 18:29:34
+SYS_C0011337    C               TEST_CHECK_CONSTRAINT col_1 <1000      ENABLED VALIDATED 31.05.2017 18:32:07
+*/
+
+-- Now after change we try to insert into a values
+INSERT INTO test_check_constraint VALUES (999); 
+--ORA-02290: check constraint (HR.SYS_C0011336) violated
+                         
+INSERT INTO test_check_constraint VALUES (1001); 
+--ORA-02290: check constraint (HR.SYS_C0011337) violated
+
+INSERT INTO test_check_constraint VALUES (101); 
+--ORA-02290: check constraint (HR.SYS_C0011336) violated
+
+-- Solution
+ALTER TABLE test_check_constraint DISABLE CONSTRAINT SYS_C0011335;
+ALTER TABLE test_check_constraint DISABLE CONSTRAINT SYS_C0011336;
+
+-- Verification script
+SELECT 
+     constraint_name,
+     constraint_type,
+     table_name,
+     search_condition,
+     status,
+     validated,
+     last_change 
+FROM 
+     user_constraints 
+WHERE 
+     table_name = 'TEST_CHECK_CONSTRAINT';
+/*
+CONSTRAINT_NAME CONSTRAINT_TYPE TABLE_NAME            SEARCH_CONDITION STATUS   VALIDATED     LAST_CHANGE
+--------------- --------------- --------------------- ---------------- -------- ------------- -------------------  
+SYS_C0011335    C               TEST_CHECK_CONSTRAINT col_1 >100       DISABLED NOT VALIDATED 31.05.2017 18:39:45
+SYS_C0011336    C               TEST_CHECK_CONSTRAINT col_1 >1000      DISABLED NOT VALIDATED 31.05.2017 18:40:02
+SYS_C0011337    C               TEST_CHECK_CONSTRAINT col_1 <1000      ENABLED  VALIDATED     31.05.2017 18:32:07
+*/
+
+INSERT INTO test_check_constraint VALUES (999);
+--Insert - 1 row(s)
+
+-- OR --
+ALTER TABLE test_check_constraint DROP CONSTRAINT SYS_C0011335;
+ALTER TABLE test_check_constraint DROP CONSTRAINT SYS_C0011336;
+
+
+-- Verification script
+SELECT 
+     constraint_name,
+     constraint_type,
+     table_name,
+     search_condition,
+     status,
+     validated,
+     last_change 
+FROM 
+     user_constraints 
+WHERE 
+     table_name = 'TEST_CHECK_CONSTRAINT';
+/*
+CONSTRAINT_NAME CONSTRAINT_TYPE TABLE_NAME            SEARCH_CONDITION STATUS   VALIDATED     LAST_CHANGE
+--------------- --------------- --------------------- ---------------- -------- ------------- -------------------  
+SYS_C0011337    C               TEST_CHECK_CONSTRAINT col_1 <1000      ENABLED  VALIDATED     31.05.2017 18:32:07
+*/
+
+INSERT INTO test_check_constraint VALUES (999);
+--Insert - 1 row(s)
+
+-- OR --
+--You have to create proper database design structure
+--Step 1
+DROP TABLE test_check_constraint CASCADE CONSTRAINTS;
+CREATE TABLE test_check_constraint
+(
+ col_1  NUMBER CHECK(col_1 <1000)
+);
+ 
+-- Verification script
+SELECT 
+     constraint_name,
+     constraint_type,
+     table_name,
+     search_condition,
+     status,
+     validated,
+     last_change 
+FROM 
+     user_constraints 
+WHERE 
+     table_name = 'TEST_CHECK_CONSTRAINT';
+/*
+CONSTRAINT_NAME CONSTRAINT_TYPE TABLE_NAME            SEARCH_CONDITION STATUS  VALIDATED LAST_CHANGE
+--------------- --------------- --------------------- ---------------- ------- --------- -------------------  
+SYS_C0011343    C               TEST_CHECK_CONSTRAINT col_1 <1000       ENABLED VALIDATED 31.05.2017 18:52:04
+*/
+
+-- Object structure 
+PROMPT CREATE TABLE test_check_constraint
+CREATE TABLE test_check_constraint (
+  col_1 NUMBER NULL
+)
+  STORAGE (
+    NEXT       1024 K
+  )
+/
+
+PROMPT ALTER TABLE test_check_constraint ADD CHECK
+ALTER TABLE test_check_constraint
+  ADD CHECK (
+    col_1 <1000
+  )
+/
+
+INSERT INTO test_check_constraint VALUES(999);
+--Insert - 1 row(s)
+COMMIT;
+
+--Step 2
+ALTER TABLE test_check_constraint MODIFY CHECK(col_1 >1000);
+--ORA-02293: cannot validate (HR.SYS_C0011343) - check constraint violated
+
