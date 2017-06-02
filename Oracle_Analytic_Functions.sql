@@ -140,6 +140,29 @@ employee_id department_id salary salary_next salary_difference
 201         20            13000  0           -13000
 */
 
+SELECT
+      queryname,
+      curtime,
+      LEAD(curtime,1) OVER (ORDER BY curtime)             AS curtime_next,
+      LEAD(curtime,1) OVER (ORDER BY curtime) - curtime   AS curtime_diff
+FROM
+    (SELECT 'SQL_01' queryname, SYSDATE   curtime FROM dual UNION ALL
+     SELECT 'SQL_02' queryname, SYSDATE+1 curtime FROM dual UNION ALL
+     SELECT 'SQL_03' queryname, SYSDATE+2 curtime FROM dual UNION ALL
+     SELECT 'SQL_04' queryname, SYSDATE+3 curtime FROM dual UNION ALL
+     SELECT 'SQL_05' queryname, SYSDATE+4 curtime FROM dual
+    );
+
+/*
+QUERYNAME CURTIME             CURTIME_NEXT        CURTIME_DIFF
+--------- ------------------- ------------------- ------------
+SQL_01    02.06.2017 17:21:52 03.06.2017 17:21:52            1
+SQL_02    03.06.2017 17:21:52 04.06.2017 17:21:52            1
+SQL_03    04.06.2017 17:21:52 05.06.2017 17:21:52            1
+SQL_04    05.06.2017 17:21:52 06.06.2017 17:21:52            1
+SQL_05    06.06.2017 17:21:52                                 
+*/
+
 -- Used in Pagination
 SELECT 
       *
