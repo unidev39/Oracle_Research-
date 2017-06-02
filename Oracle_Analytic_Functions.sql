@@ -169,3 +169,41 @@ FROM (
             ) b
      )
  WHERE sno1 BETWEEN 11 AND 20;
+ 
+ WITH data AS
+(
+  SELECT 
+       'a,a,a,b,z,z,x,y,y,c'||','  col
+  FROM 
+       dual
+)
+SELECT 
+     wm_concat(col) col
+FROM (
+      SELECT DISTINCT 
+           regexp_substr(col, '[^,]+',1,level) col
+      FROM 
+          data
+      CONNECT BY LEVEL <= (LENGTH (col) - LENGTH (REPLACE (col, ',')))
+     );
+ 
+ SELECT
+     SUM(number_data)                                    number_data,
+     listagg(string_data,'') WITHIN GROUP(ORDER BY sn)   string_data,
+     listagg(wildcard_data,'') WITHIN GROUP(ORDER BY sn) wildcard_data
+FROM (
+      SELECT
+           ROWNUM sn,
+           regexp_substr(string,'[[:digit:]]+',1,LEVEL) number_data,
+           regexp_substr(string,'[[:alpha:]]+',1,LEVEL) string_data,
+           regexp_substr(string,'(\W)',1,LEVEL)         wildcard_data
+      FROM (
+            WITH tbl_string AS
+            (SELECT 'a24iu5e1hg1uo9@^$(5dhjf$^%|5g!1g#e1' string FROM dual)
+            SELECT string FROM tbl_string
+
+           )
+      CONNECT BY LEVEL <= LENGTH(string)-LENGTH(regexp_replace(string,'[[:digit:]]'))+1
+     );
+     
+ 
