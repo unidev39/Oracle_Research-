@@ -163,6 +163,68 @@ SQL_04    05.06.2017 17:21:52 06.06.2017 17:21:52            1
 SQL_05    06.06.2017 17:21:52                                 
 */
 
+DROP TABLE log_time purge;
+CREATE TABLE log_time
+(
+  queryname VARCHAR2(50),
+  curtime   TIMESTAMP 
+);
+-- To insert data
+DECLARE
+   l_v VARCHAR2(32767) := 0;
+BEGIN
+   INSERT INTO log_time VALUES('block_1',systimestamp);
+   BEGIN 
+       FOR i IN 1 .. 5000000
+       LOOP
+          l_v := l_v + i;
+       END LOOP;
+   END;
+
+   INSERT INTO log_time VALUES('block_2',systimestamp);
+   BEGIN 
+       FOR i IN 1 .. 500000
+       LOOP
+          l_v := l_v + i;
+       END LOOP;
+   END;
+
+   INSERT INTO log_time VALUES('block_3',systimestamp);
+   BEGIN 
+       FOR i IN 1 .. 5000
+       LOOP
+          l_v := l_v + i;
+       END LOOP;
+   END;
+
+   INSERT INTO log_time VALUES('block_4',systimestamp);
+   BEGIN 
+       FOR i IN 1 .. 500000
+       LOOP
+          l_v := l_v + i;
+       END LOOP;
+   END;
+   COMMIT;
+END;
+/
+
+SELECT
+     queryname,
+     curtime,
+     LEAD(curtime,1) OVER (ORDER BY curtime)             AS curtime_next,
+     LEAD(curtime,1) OVER (ORDER BY curtime) - curtime   AS curtime_diff
+FROM 
+     log_time;
+
+/*
+QUERYNAME CURTIME               CURTIME_NEXT          CURTIME_DIFF
+--------- --------------------- --------------------- --------------
+block_1   02.06.17 08:10:25.281 02.06.17 08:10:26.668 +0 00:00:01.38
+block_2   02.06.17 08:10:26.668 02.06.17 08:10:26.803 +0 00:00:00.13
+block_3   02.06.17 08:10:26.803 02.06.17 08:10:26.804 +0 00:00:00.00
+block_4   02.06.17 08:10:26.804                                     
+*/
+
 -- Used in Pagination
 SELECT 
       *
@@ -251,66 +313,3 @@ NUMBER_DATA STRING_DATA     WILDCARD_DATA
 ----------- --------------- -------------
          52 aiuehguodhjfgge @^$($^%|!#   
 */
-
-DROP TABLE log_time purge;
-CREATE TABLE log_time
-(
-  queryname VARCHAR2(50),
-  curtime   TIMESTAMP 
-);
--- To insert data
-DECLARE
-   l_v VARCHAR2(32767) := 0;
-BEGIN
-   INSERT INTO log_time VALUES('block_1',systimestamp);
-   BEGIN 
-       FOR i IN 1 .. 5000000
-       LOOP
-          l_v := l_v + i;
-       END LOOP;
-   END;
-
-   INSERT INTO log_time VALUES('block_2',systimestamp);
-   BEGIN 
-       FOR i IN 1 .. 500000
-       LOOP
-          l_v := l_v + i;
-       END LOOP;
-   END;
-
-   INSERT INTO log_time VALUES('block_3',systimestamp);
-   BEGIN 
-       FOR i IN 1 .. 5000
-       LOOP
-          l_v := l_v + i;
-       END LOOP;
-   END;
-
-   INSERT INTO log_time VALUES('block_4',systimestamp);
-   BEGIN 
-       FOR i IN 1 .. 500000
-       LOOP
-          l_v := l_v + i;
-       END LOOP;
-   END;
-   COMMIT;
-END;
-/
-
-SELECT
-     queryname,
-     curtime,
-     LEAD(curtime,1) OVER (ORDER BY curtime)             AS curtime_next,
-     LEAD(curtime,1) OVER (ORDER BY curtime) - curtime   AS curtime_diff
-FROM 
-     log_time;
-
-/*
-QUERYNAME CURTIME               CURTIME_NEXT          CURTIME_DIFF
---------- --------------------- --------------------- --------------
-block_1   02.06.17 08:10:25.281 02.06.17 08:10:26.668 +0 00:00:01.38
-block_2   02.06.17 08:10:26.668 02.06.17 08:10:26.803 +0 00:00:00.13
-block_3   02.06.17 08:10:26.803 02.06.17 08:10:26.804 +0 00:00:00.00
-block_4   02.06.17 08:10:26.804                                     
-*/
-
