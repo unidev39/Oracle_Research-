@@ -168,9 +168,19 @@ FROM (
                  a.department_id = 50
             ) b
      )
- WHERE sno1 BETWEEN 11 AND 20;
+ WHERE sno1 BETWEEN 11 AND 15;
+
+/*
+SNO EMPLOYEE_ID FIRST_NAME LAST_NAME EMAIL    PHONE_NUMBER HIRE_DATE           JOB_ID   SALARY COMMISSION_PCT MANAGER_ID DEPARTMENT_ID SNO1
+--- ----------- ---------- --------- -------  ------------ ------------------- -------- ------ -------------- ---------- ------------- ----
+ 11         128 Steven     Markle    SMARKLE  650.124.1434 08.03.2008 00:00:00 ST_CLERK   2200                       120            50   11
+ 12         129 Laura      Bissot    LBISSOT  650.124.5234 20.08.2005 00:00:00 ST_CLERK   3300                       121            50   12
+ 13         130 Mozhe      Atkinson  MATKINSO 650.124.6234 30.10.2005 00:00:00 ST_CLERK   2800                       121            50   13
+ 14         131 James      Marlow    JAMRLOW  650.124.7234 16.02.2005 00:00:00 ST_CLERK   2500                       121            50   14
+ 15         132 TJ         Olson     TJOLSON  650.124.8234 10.04.2007 00:00:00 ST_CLERK   2100                       121            50   15
+*/
  
- WITH data AS
+WITH data AS
 (
   SELECT 
        'a,a,a,b,z,z,x,y,y,c'||','  col
@@ -185,9 +195,16 @@ FROM (
       FROM 
           data
       CONNECT BY LEVEL <= (LENGTH (col) - LENGTH (REPLACE (col, ',')))
+      ORDER BY col
      );
- 
- SELECT
+
+/*
+COL
+-----------        
+a,b,c,x,y,z
+*/
+
+SELECT
      SUM(number_data)                                    number_data,
      listagg(string_data,'') WITHIN GROUP(ORDER BY sn)   string_data,
      listagg(wildcard_data,'') WITHIN GROUP(ORDER BY sn) wildcard_data
@@ -205,5 +222,9 @@ FROM (
            )
       CONNECT BY LEVEL <= LENGTH(string)-LENGTH(regexp_replace(string,'[[:digit:]]'))+1
      );
-     
- 
+
+/*
+NUMBER_DATA STRING_DATA     WILDCARD_DATA
+----------- --------------- -------------
+         52 aiuehguodhjfgge @^$($^%|!#   
+*/
