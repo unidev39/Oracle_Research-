@@ -300,10 +300,17 @@ FROM (
            regexp_substr(string,'[[:alpha:]]+',1,LEVEL) string_data,
            regexp_substr(string,'(\W)',1,LEVEL)         wildcard_data
       FROM (
-            WITH tbl_string AS
-            (SELECT 'a24iu5e1hg1uo9@^$(5dhjf$^%|5g!1g#e1' string FROM dual)
-            SELECT string FROM tbl_string
-
+            WITH tbl_string 
+		  AS
+             (
+		    SELECT 
+			    'a24iu5e1hg1uo9@^$(5dhjf$^%|5g!1g#e1' string 
+		    FROM dual
+		   )
+            SELECT 
+			  string 
+		  FROM 
+			  tbl_string
            )
       CONNECT BY LEVEL <= LENGTH(string)-LENGTH(regexp_replace(string,'[[:digit:]]'))+1
      );
