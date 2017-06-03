@@ -298,25 +298,25 @@ AS
      dual
 )
 SELECT
-     SUM(number_data)                                               number_data,
-     listagg(string_data,'') WITHIN GROUP(ORDER BY string_data)     string_data,
-     listagg(wildcard_data,'') WITHIN GROUP(ORDER BY wildcard_data) wildcard_data
+     SUM(number_data)                                     number_data,
+     listagg(string_data,'') WITHIN GROUP(ORDER BY sn)    string_data,
+     listagg(wildcard_data,'') WITHIN GROUP(ORDER BY sn)  wildcard_data
 FROM (
       SELECT
-           regexp_substr(string,'[[:digit:]]+',1,LEVEL) number_data,
-           regexp_substr(string,'[[:alpha:]]+',1,LEVEL) string_data,
-           regexp_substr(string,'(\W)',1,LEVEL)         wildcard_data
+           ROWNUM sn,
+           regexp_substr(string,'[[:digit:]]+',1,LEVEL)   number_data,
+           regexp_substr(string,'[[:alpha:]]+',1,LEVEL)   string_data,
+           regexp_substr(string,'(\W)',1,LEVEL)           wildcard_data
       FROM (
             SELECT 
                  string 
             FROM 
                  tbl_string
            )
-      CONNECT BY LEVEL <= LENGTH(string)-LENGTH(regexp_replace(string,'[[:digit:]]'))+1
+      CONNECT BY LEVEL <= LENGTH(string)-LENGTH(regexp_replace(string,'[[:digit:]]+'))
      ); 
 /*
 NUMBER_DATA STRING_DATA     WILDCARD_DATA
 ----------- --------------- -------------
-52          adhjfeegghgiuuo !#$$%(@^^|
-  
+         52 aiuehguodhjfgge @^$($^%|!#   
 */
