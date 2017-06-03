@@ -289,34 +289,34 @@ COL
 a,b,c,x,y,z
 */
 
+WITH tbl_string 
+AS
+(
+ SELECT 
+      'a24iu5e1hg1uo9@^$(5dhjf$^%|5g!1g#e1' string 
+ FROM 
+     dual
+)
 SELECT
-     SUM(number_data)                                    number_data,
-     listagg(string_data,'') WITHIN GROUP(ORDER BY sn)   string_data,
-     listagg(wildcard_data,'') WITHIN GROUP(ORDER BY sn) wildcard_data
+     SUM(number_data)                                               number_data,
+     listagg(string_data,'') WITHIN GROUP(ORDER BY string_data)     string_data,
+     listagg(wildcard_data,'') WITHIN GROUP(ORDER BY wildcard_data) wildcard_data
 FROM (
       SELECT
-           ROWNUM sn,
            regexp_substr(string,'[[:digit:]]+',1,LEVEL) number_data,
            regexp_substr(string,'[[:alpha:]]+',1,LEVEL) string_data,
            regexp_substr(string,'(\W)',1,LEVEL)         wildcard_data
       FROM (
-            WITH tbl_string 
-            AS
-             (
-              SELECT 
-                   'a24iu5e1hg1uo9@^$(5dhjf$^%|5g!1g#e1' string 
-              FROM 
-                  dual
-             )
             SELECT 
                  string 
             FROM 
-             tbl_string
+                 tbl_string
            )
       CONNECT BY LEVEL <= LENGTH(string)-LENGTH(regexp_replace(string,'[[:digit:]]'))+1
      ); 
 /*
 NUMBER_DATA STRING_DATA     WILDCARD_DATA
 ----------- --------------- -------------
-         52 aiuehguodhjfgge @^$($^%|!#   
+52          adhjfeegghgiuuo !#$$%(@^^|
+  
 */
