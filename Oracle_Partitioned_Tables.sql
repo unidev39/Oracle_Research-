@@ -160,3 +160,63 @@ RANGE_NO RANGE_DATE COMMENTS
 ------- ---------- ------------------------------------------
 3      3/30/2017   1 Row Inserted into ranges_q3 partition
 */
+
+
+2. Hash Partitioning Tables
+
+Hash partitioning is useful when there is no obvious range key, or range partitioning will cause uneven distribution of data. 
+The number of partitions must be a power of 2 (2, 4, 8, 16...) and can be specified by the PARTITIONS...STORE IN clause.
+The nature of hash partitioning depend on The values returned by a hash function are called hash values, hash codes, digests, or simply hashes.
+
+DROP TABLE hash_partitioning PURGE;
+CREATE TABLE hash_partitioning
+(
+ hash_no    NUMBER NOT NULL,
+ hash_date  DATE   NOT NULL,
+ comments          VARCHAR2(500)
+)
+PARTITION BY HASH (hash_no)
+(
+ PARTITION hashs_q1,
+ PARTITION hashs_q2
+);
+
+INSERT INTO hash_partitioning VALUES (1,sysdate,'A');
+INSERT INTO hash_partitioning VALUES (1,sysdate,'A');
+INSERT INTO hash_partitioning VALUES (2,sysdate,'A');
+INSERT INTO hash_partitioning VALUES (3,sysdate,'A');
+INSERT INTO hash_partitioning VALUES (4,sysdate,'A');
+INSERT INTO hash_partitioning VALUES (4,sysdate,'A');
+INSERT INTO hash_partitioning VALUES (5,sysdate,'A');
+
+SELECT * FROM hash_partitioning;
+/*
+HASH_NO HASH_DATE           COMMENTS
+------ -------------------  --------
+2      6/5/2017 2:39:46 AM  A
+5      6/5/2017 2:40:44 AM  A
+1      6/5/2017 2:39:25 AM  A
+1      6/5/2017 2:39:52 AM  A
+3      6/5/2017 2:40:06 AM  A
+4      6/5/2017 2:40:14 AM  A
+4      6/5/2017 2:40:22 AM  A
+*/
+
+SELECT * FROM hash_partitioning PARTITION (hashs_q1);
+/*
+HASH_NO HASH_DATE           COMMENTS
+------ -------------------  --------
+2      6/5/2017 2:39:46 AM  A
+5      6/5/2017 2:40:44 AM  A
+*/
+SELECT * FROM hash_partitioning PARTITION (hashs_q2);
+/*
+HASH_NO HASH_DATE           COMMENTS
+------ -------------------  --------
+1      6/5/2017 2:39:25 AM  A
+1      6/5/2017 2:39:52 AM  A
+3      6/5/2017 2:40:06 AM  A
+4      6/5/2017 2:40:14 AM  A
+4      6/5/2017 2:40:22 AM  A
+*/
+
