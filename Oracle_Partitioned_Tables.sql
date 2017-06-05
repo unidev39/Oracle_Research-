@@ -23,6 +23,15 @@ Partitioning of tables and indexes can benefit the performance and maintenance i
 
 Note: In a real situation it is likely that these partitions would be assigned to different tablespaces to reduce device contention.
 
+-- Data dictionary view to show the oracle partition tables	
+SELECT 
+     table_name, 
+	 partition_name, 
+	 high_value
+FROM 
+     user_tab_partitions;
+
+--***************************************************************--     
 1. Range Partitioning Tables
 
 Range Partitioning is a table using date ranges allows all data of a similar age to be stored in same partition. 
@@ -276,4 +285,168 @@ DEPTNO DEPTNAME ZONE
 10     Nepal    KOSHI
 10     Nepal    MECHI
 10     Nepal    SAGARMATHA
+*/
+
+3. Composite Partitioning Tables
+
+Composite partitioning allows range partitions to be hash subpartitioned on a different key. 
+
+DROP TABLE composite_partitioning PURGE;
+CREATE TABLE composite_partitioning
+(
+ composite_no    NUMBER NOT NULL,
+ composite_date  DATE   NOT NULL,
+ comments               VARCHAR2(500)
+)
+PARTITION BY RANGE (composite_date)
+SUBPARTITION BY HASH (composite_no)
+SUBPARTITIONS 4
+(
+ PARTITION ranges_p1 VALUES LESS THAN (TO_DATE('01/02/2017', 'DD/MM/YYYY')),
+ PARTITION ranges_p2 VALUES LESS THAN (TO_DATE('01/03/2017', 'DD/MM/YYYY')),
+ PARTITION ranges_p3 VALUES LESS THAN (TO_DATE('01/04/2017', 'DD/MM/YYYY')),
+ PARTITION ranges_p4 VALUES LESS THAN (TO_DATE('01/05/2017', 'DD/MM/YYYY'))
+);
+
+SELECT 
+     table_name, 
+     partition_name, 
+     subpartition_name
+FROM 
+     user_tab_subpartitions;
+/*
+TABLE_NAME              PARTITION_NAME SUBPARTITION_NAME
+----------------------  -------------- -----------------
+COMPOSITE_PARTITIONING    RANGES_P1    SYS_SUBP37      
+COMPOSITE_PARTITIONING    RANGES_P1    SYS_SUBP38      
+COMPOSITE_PARTITIONING    RANGES_P1    SYS_SUBP39      
+COMPOSITE_PARTITIONING    RANGES_P1    SYS_SUBP40      
+COMPOSITE_PARTITIONING    RANGES_P2    SYS_SUBP41      
+COMPOSITE_PARTITIONING    RANGES_P2    SYS_SUBP42      
+COMPOSITE_PARTITIONING    RANGES_P2    SYS_SUBP43      
+COMPOSITE_PARTITIONING    RANGES_P2    SYS_SUBP44      
+COMPOSITE_PARTITIONING    RANGES_P3    SYS_SUBP45      
+COMPOSITE_PARTITIONING    RANGES_P3    SYS_SUBP46      
+COMPOSITE_PARTITIONING    RANGES_P3    SYS_SUBP47      
+COMPOSITE_PARTITIONING    RANGES_P3    SYS_SUBP48      
+COMPOSITE_PARTITIONING    RANGES_P4    SYS_SUBP49      
+COMPOSITE_PARTITIONING    RANGES_P4    SYS_SUBP50    
+COMPOSITE_PARTITIONING    RANGES_P4    SYS_SUBP51      
+COMPOSITE_PARTITIONING    RANGES_P4    SYS_SUBP52   
+*/
+
+DROP TABLE composite_partitioning PURGE;
+CREATE TABLE composite_partitioning
+(
+ composite_no    NUMBER NOT NULL,
+ composite_date  DATE   NOT NULL,
+ comments               VARCHAR2(500)
+)
+PARTITION BY RANGE (composite_date)
+SUBPARTITION BY HASH (composite_no)
+SUBPARTITION TEMPLATE
+(
+ SUBPARTITION hash_p1,
+ SUBPARTITION hash_p2,
+ SUBPARTITION hash_p3,
+ SUBPARTITION hash_p4
+)
+(
+ PARTITION ranges_p1 VALUES LESS THAN (TO_DATE('01/02/2017', 'DD/MM/YYYY')),
+ PARTITION ranges_p2 VALUES LESS THAN (TO_DATE('01/03/2017', 'DD/MM/YYYY')),
+ PARTITION ranges_p3 VALUES LESS THAN (TO_DATE('01/04/2017', 'DD/MM/YYYY')),
+ PARTITION ranges_p4 VALUES LESS THAN (TO_DATE('01/05/2017', 'DD/MM/YYYY'))
+);
+
+SELECT 
+     table_name, 
+     partition_name, 
+     subpartition_name
+FROM 
+     user_tab_subpartitions;
+/*
+TABLE_NAME              PARTITION_NAME SUBPARTITION_NAME
+----------------------  -------------- -----------------
+COMPOSITE_PARTITIONING    RANGES_P1       RANGES_P1_HASH_P1    
+COMPOSITE_PARTITIONING    RANGES_P1       RANGES_P1_HASH_P2    
+COMPOSITE_PARTITIONING    RANGES_P1       RANGES_P1_HASH_P3    
+COMPOSITE_PARTITIONING    RANGES_P1       RANGES_P1_HASH_P4    
+COMPOSITE_PARTITIONING    RANGES_P2       RANGES_P2_HASH_P1    
+COMPOSITE_PARTITIONING    RANGES_P2       RANGES_P2_HASH_P2    
+COMPOSITE_PARTITIONING    RANGES_P2       RANGES_P2_HASH_P3    
+COMPOSITE_PARTITIONING    RANGES_P2       RANGES_P2_HASH_P4    
+COMPOSITE_PARTITIONING    RANGES_P3       RANGES_P3_HASH_P1    
+COMPOSITE_PARTITIONING    RANGES_P3       RANGES_P3_HASH_P2    
+COMPOSITE_PARTITIONING    RANGES_P3       RANGES_P3_HASH_P3    
+COMPOSITE_PARTITIONING    RANGES_P3       RANGES_P3_HASH_P4    
+COMPOSITE_PARTITIONING    RANGES_P4       RANGES_P4_HASH_P1    
+COMPOSITE_PARTITIONING    RANGES_P4       RANGES_P4_HASH_P2    
+COMPOSITE_PARTITIONING    RANGES_P4       RANGES_P4_HASH_P3    
+COMPOSITE_PARTITIONING    RANGES_P4       RANGES_P4_HASH_P4
+*/
+
+INSERT INTO composite_partitioning VALUES (4,TO_DATE('30/04/2017', 'DD/MM/YYYY'),'1 Row Inserted into ranges_q4 partition');
+-- 1 Row inserted
+
+SELECT 
+     * 
+FROM composite_partitioning;
+/*
+COMPOSITE_NO COMPOSITE_DATE COMMENTS
+------------ -------------- ---------------------------------------
+4            4/30/2017      1 Row Inserted into ranges_q4 partition
+*/
+
+SELECT 
+     * 
+FROM 
+     composite_partitioning PARTITION (ranges_p4);
+/*
+COMPOSITE_NO COMPOSITE_DATE COMMENTS
+------------ -------------- ---------------------------------------
+4            4/30/2017      1 Row Inserted into ranges_q4 partition
+*/
+
+SELECT 
+     * 
+FROM 
+     composite_partitioning SUBPARTITION (ranges_p4_hash_p4);
+/*
+COMPOSITE_NO COMPOSITE_DATE COMMENTS
+------------ -------------- ---------------------------------------
+4            4/30/2017      1 Row Inserted into ranges_q4 partition
+*/
+
+INSERT INTO composite_partitioning VALUES (3,TO_DATE('31/03/2017', 'DD/MM/YYYY'),'1 Row Inserted into ranges_q3 partition');
+-- 1 Row inserted
+
+SELECT 
+     * 
+FROM 
+     composite_partitioning;
+/*
+COMPOSITE_NO COMPOSITE_DATE COMMENTS
+------------ -------------- ---------------------------------------
+3            3/31/2017      1 Row Inserted into ranges_q3 partition
+4            4/30/2017      1 Row Inserted into ranges_q4 partition
+*/
+
+SELECT 
+     * 
+FROM 
+     composite_partitioning PARTITION (ranges_p3);
+/*
+COMPOSITE_NO COMPOSITE_DATE COMMENTS
+------------ -------------- ---------------------------------------
+3            3/31/2017      1 Row Inserted into ranges_q3 partition
+*/
+
+SELECT 
+     * 
+FROM 
+     composite_partitioning SUBPARTITION(ranges_p3_hash_p4);
+/*
+COMPOSITE_NO COMPOSITE_DATE COMMENTS
+------------ -------------- ---------------------------------------
+3            3/31/2017      1 Row Inserted into ranges_q3 partition
 */
