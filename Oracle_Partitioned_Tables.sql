@@ -10,18 +10,19 @@ Partitioning of tables and indexes can benefit the performance and maintenance i
     3. There is a greater ability for parallelism with more partitions.
 
 -- Types of Oracle Partitione Tables and Indexs
-In a real situation it is likely that these partitions would be assigned to different tablespaces to reduce device contention.
-
     1. Range Partitioning Tables
     2. Hash Partitioning Tables
-    3. Composite Partitioning Tables
-    4. Partitioning Indexes
-    5. Local Prefixed Indexes
-    6. Local Non-Prefixed Indexes
-    7. Global Prefixed Indexes
-    8. Global Non-Prefixed Indexes
-    9. Partitioning Existing Tables
-	
+    3. Creating List-Partitioned Tables
+    4. Composite Partitioning Tables
+    5. Partitioning Indexes
+    6. Local Prefixed Indexes
+    7. Local Non-Prefixed Indexes
+    8. Global Prefixed Indexes
+    9. Global Non-Prefixed Indexes
+    10. Partitioning Existing Tables
+
+Note: In a real situation it is likely that these partitions would be assigned to different tablespaces to reduce device contention.
+
 1. Range Partitioning Tables
 
 Range Partitioning is a table using date ranges allows all data of a similar age to be stored in same partition. 
@@ -220,3 +221,59 @@ HASH_NO HASH_DATE           COMMENTS
 4      6/5/2017 2:40:22 AM  A
 */
 
+3. Creating List-Partitioned Tables (Label)
+
+The semantics for creating list partitions are very similar to those for creating range partitions. 
+However, to create list partitions, you specify a PARTITION BY LIST clause in the 
+CREATE TABLE statement, and the PARTITION clauses specify lists of literal values, 
+which are the discrete values of the partitioning columns that qualify rows to be included in the partition. 
+For list partitioning, the partitioning key can only be a single column name from the table.
+
+Available only with list partitioning, you can use the keyword DEFAULT to describe the value list for a partition. 
+This identifies a partition that accommodates rows that do not map into any of the other partitions.
+
+DROP TABLE list_partitioned PURGE;
+CREATE TABLE list_partitioned
+(
+ deptno           NUMBER, 
+ deptname         VARCHAR2(20),
+ zone            VARCHAR2(20)
+)
+PARTITION BY LIST (zone)
+(
+ PARTITION list_zone_l1  VALUES ('BAGMATI', 'NARAYNI'),
+ PARTITION list_zone_l2  VALUES ('KOSHI', 'MECHI', 'SAGARMATHA')
+);
+
+INSERT INTO list_partitioned VALUES (10,'Nepal','BAGMATI');
+INSERT INTO list_partitioned VALUES (10,'Nepal','KOSHI');
+INSERT INTO list_partitioned VALUES (10,'Nepal','NARAYNI');
+INSERT INTO list_partitioned VALUES (10,'Nepal','MECHI');
+INSERT INTO list_partitioned VALUES (10,'Nepal','SAGARMATHA');
+
+SELECT * FROM list_partitioned;
+/*
+DEPTNO DEPTNAME ZONE
+------ -------- --------
+10     Nepal    BAGMATI
+10     Nepal    NARAYNI
+10     Nepal    KOSHI
+10     Nepal    MECHI
+10     Nepal    SAGARMATHA
+*/
+
+SELECT * FROM list_partitioned PARTITION (list_zone_l1);
+/*
+DEPTNO DEPTNAME ZONE
+------ -------- --------
+10     Nepal    BAGMATI
+10     Nepal    NARAYNI
+*/
+SELECT * FROM list_partitioned PARTITION (list_zone_l2);
+/*
+DEPTNO DEPTNAME ZONE
+------ -------- --------
+10     Nepal    KOSHI
+10     Nepal    MECHI
+10     Nepal    SAGARMATHA
+*/
