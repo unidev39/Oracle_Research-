@@ -488,8 +488,8 @@ CREATE INDEX range_partitioning_idx ON range_partitioning (range_date) LOCAL
 
 7. Local Non-Prefixed Indexes
 
-Assuming the range_partitioning table is range partitioned on range_date, the followning are examples of local prefixed indexes.
-local Non-Prefixed Index. The indexed column does not match the partition key.
+Assuming the range_partitioning table is range partitioned on range_date, the followning are examples of local Non-Prefixed Index. 
+The indexed column does not match the partition key.
 
 CREATE INDEX range_partitioning_idx ON range_partitioning (range_date) LOCAL
 (
