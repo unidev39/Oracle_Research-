@@ -287,7 +287,7 @@ DEPTNO DEPTNAME ZONE
 10     Nepal    SAGARMATHA
 */
 
-3. Composite Partitioning Tables
+4. Composite Partitioning Tables
 
 Composite partitioning allows range partitions to be hash subpartitioned on a different key. 
 
