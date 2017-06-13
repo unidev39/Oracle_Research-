@@ -515,3 +515,175 @@ PARTITION BY RANGE (range_date)
 9. Global Non-Prefixed Indexes
 
 Oracle does not support Global Non Prefixed indexes.
+
+--************************************************--
+
+ALTER TABLE - Partition Examples 
+  1. ADD PARTITION
+  2. DROP PARTITION
+  3. EXCHANGE PARTITION
+  4. MODIFY PARTITION
+  5. MOVE PARTITION
+  6. MERGE PARTITION
+  7. SPLIT PARTITION
+  8. TRUNCATE PARTITION
+  
+1. ADD PARTITION
+
+Use ALTER TABLE ADD PARTITION to add a partition to the high end of the table (after the last existing partition). 
+If the first element of the partition bound of the high partition is MAXVALUE, you cannot add a partition to the table. 
+You must split the high partition.
+
+You can add a partition to a table even if one or more of the table indexes or index partitions are marked UNUSABLE.
+
+You must use the SPLIT PARTITION clause to add a partition at the beginning or the middle of the table.
+
+The following example adds partition ranges_q5:
+
+ALTER TABLE range_partitioning
+ADD PARTITION ranges_q5 VALUES LESS THAN (TO_DATE('01/06/2017', 'DD/MM/YYYY'));
+
+2. DROP PARTITION
+
+ALTER TABLE DROP PARTITION drops a partition and its data. If you want to drop a partition but keep its data in the table, 
+you must merge the partition into one of the adjacent partitions.
+
+If you drop a partition and later insert a row that would have belonged to the dropped partition, the row will be stored 
+in the next higher partition. However, if you drop the highest partition, the insert will fail because the range of values 
+represented by the dropped partition is no longer valid for the table.
+
+This statement also drops the corresponding partition in each local index defined on table. The index partitions are dropped 
+even if they are marked as unusable.
+
+If there are global indexes defined on table, and the partition you want to drop is not empty, dropping the partition marks 
+all the global, non-partitioned indexes, and all the partitions of global partitioned indexes as unusable.
+
+When a table contains only one partition, you cannot drop the partition. You must drop the table.
+
+The following example drops partition ranges_q5:
+
+ALTER TABLE range_partitioning DROP PARTITION ranges_q5;
+
+3. EXCHANGE PARTITION
+
+This form of ALTER TABLE converts a partition to a non-partitioned table and a table to a partition by exchanging their data segments. 
+You must have ALTER TABLE privileges on both tables to perform this operation.
+
+The statistics of the table and partition, including table, column, index statistics and histograms are exchanged. 
+The aggregate statistics of the partitioned table are recalculated.
+
+The logging attribute of the table and partition is exchanged.
+
+The following example converts partition FEB97 to table SALES_FEB97:
+
+ALTER TABLE range_partitioning_test
+EXCHANGE PARTITION ranges_q5 WITH TABLE range_partitioning
+WITHOUT VALIDATION;
+
+4. MODIFY PARTITION
+
+Use the MODIFY PARTITION options of ALTER TABLE to
+
+ - mark local index partitions corresponding to a table partition as unusable.
+ - rebuild all the unusable local index partitions corresponding to a table partition.
+ - modify the physical attributes of a table partition.
+ 
+The following example marks all the local index partitions corresponding to the APR96 partition of the procurements table UNUSABLE:
+
+ALTER TABLE procurements MODIFY PARTITION apr96
+UNUSABLE LOCAL INDEXES;
+The following example rebuilds all the local index partitions which were marked UNUSABLE:
+
+ALTER TABLE procurements MODIFY PARTITION jan98
+REBUILD UNUSABLE LOCAL INDEXES;
+The following example changes MAXEXTENTS for partition KANSAS_OFF:
+
+ALTER TABLE branch MODIFY PARTITION kansas_off
+STORAGE(MAXEXTENTS 100) LOGGING;
+
+5. MOVE PARTITION
+
+This ALTER TABLE option moves a table partition to another segment. MOVE PARTITION always drops the partition is old segment 
+and creates a new segment, even if you do not specify a new tablespace.
+
+If partition_name is not empty, MOVE PARTITION marks all corresponding local index partitions and all global non-partitioned 
+indexes, and all the partitions of global partitioned indexes as unusable.
+
+ALTER TABLE MOVE PARTITION obtains its parallel attribute from the PARALLEL clause, if specified. If not specified, the default 
+PARALLEL attributes of the table, if any, are used. If neither is specified, it performs the move without using parallelism.
+
+The PARALLEL clause on MOVE PARTITION does not change the default PARALLEL attributes of table.
+
+The following example moves partition STATION3 to tablespace TS097:
+
+ALTER TABLE trains
+MOVE PARTITION station3 TABLESPACE ts097 NOLOGGING;
+
+6. MERGE PARTITION
+
+While there is no explicit MERGE statement, you can merge a partition using either the DROP PARTITION or EXCHANGE PARTITION clauses. 
+You can use either of the following strategies to merge table partitions.
+
+If you have data in partition PART1, and no global indexes or referential integrity constraints on the table, PARTS, you can merge 
+table partition PART1 into the next highest partition, PART2.
+
+To merge partition PART1 into partition PART2:
+
+ - Export the data from PART1.
+   - Issue the following statement:
+     ALTER TABLE PARTS DROP PARTITION PART1;
+   - Import the data from Step 1 into partition PART2.
+ Note: The corresponding local index partitions are also merged
+
+Another way to merge partition PART1 into partition PART2:
+
+ - Exchange partition PART1 of table PARTS with "dummy" table PARTS_DUMMY.
+   - Issue the following statement:
+     ALTER TABLE PARTS DROP PARTITION PART1;
+   - Insert as SELECT from the "dummy" tables to move the data from PART1 back into PART2.
+
+7. SPLIT PARTITION
+The SPLIT PARTITION option divides a partition into two partitions, each with a new segment, new physical attributes, and new initial 
+extents. The segment associated with the old partition is discarded.
+
+This statement also performs a matching split on the corresponding partition in each local index defined on table. The index partitions 
+are split even if they are marked unusable.
+
+With the exception of the TABLESPACE attribute, the physical attributes of the LOCAL index partition being split are used for both new 
+index partitions. If the parent LOCAL index lacks a default TABLESPACE attribute, new LOCAL index partitions will reside in the same 
+tablespace as the corresponding newly created partitions of the underlying table.
+
+If you do not specify physical attributes (PCTFREE, PCTUSED, INITRANS, MAXTRANS, STORAGE) for the new partitions, the current values of 
+the partition being split are used as the default values for both partitions.
+
+If partition_name is not empty, SPLIT PARTITION marks all affected index partitions as unusable. This includes all global index partitions 
+as well as the local index partitions which result from the split.
+
+The PARALLEL clause on SPLIT PARTITION does not change the default PARALLEL attributes of table.
+
+The following example splits the old partition STATION5 creating a new partition for STATION9:
+
+ALTER TABLE trains
+  SPLIT PARTITION STATION5 AT ( '50-001' )
+  INTO ( PARTITION station5 TABLESPACE train009 (MINEXTENTS 2),
+         PARTITION station9 TABLESPACE train010 )
+  PARALLEL ( DEGREE 9 );
+  
+8. TRUNCATE PARTITION
+
+Use TRUNCATE PARTITION to remove all rows from a partition in a table. Freed space is deallocated or reused depending on whether 
+DROP STORAGE or REUSE STORAGE is specified in the clause.
+
+This statement truncates the corresponding partition in each local index defined on table. The local index partitions are truncated 
+even if they are marked as unusable. The unusable local index partitions are marked valid, resetting the UNUSABLE indicator.
+
+If there are global indexes defined on table, and the partition you want to truncate is not empty, truncating the partition marks 
+all the global non-partitioned indexes, and all the partitions of global partitioned indexes as unusable.
+
+If you want to truncate a partition that contains data, you must first disable any referential integrity constraints on the table. 
+Alternatively, you can delete the rows and then truncate the partition.
+
+The following example deletes all the data in the part_17 partition and deallocates the freed space:
+
+ALTER TABLE shipments
+  TRUNCATE PARTITION part_17 DROP STORAGE;
