@@ -19,7 +19,6 @@ Partitioning of tables and indexes can benefit the performance and maintenance i
     7. Local Non-Prefixed Indexes
     8. Global Prefixed Indexes
     9. Global Non-Prefixed Indexes
-    10. Partitioning Existing Tables
 
 Note: In a real situation it is likely that these partitions would be assigned to different tablespaces to reduce device contention.
 
@@ -450,3 +449,69 @@ COMPOSITE_NO COMPOSITE_DATE COMMENTS
 ------------ -------------- ---------------------------------------
 3            3/31/2017      1 Row Inserted into ranges_q3 partition
 */
+
+5. Partitioning Indexes
+
+There are two basic types of partitioned index.
+
+Local -  All index entries in a single partition will correspond to a single table partition (equipartitioned). 
+         They are created with the LOCAL keyword and support partition independance. Equipartioning allows 
+		 oracle to be more efficient whilst devising query plans.
+Global - Index in a single partition may correspond to multiple table partitions. They are created with the GLOBAL 
+         keyword and do not support partition independance. Global indexes can only be range partitioned and may be 
+		 partitioned in such a fashion that they look equipartitioned, but Oracle will not take advantage of this 
+		 structure.
+
+Both types of indexes can be subdivided further.
+
+Prefixed -     The partition key is the leftmost column(s) of the index. Probing this type of index is less costly. 
+               If a query specifies the partition key in the where clause partition pruning is possible, that is, 
+		       not all partitions will be searched.
+Non-Prefixed - Does not support partition pruning, but is effective in accessing data that spans multiple partitions. 
+               Often used for indexing a column that is not the tables partition key, when you would like the index to 
+			   be partitioned on the same key as the underlying table.
+			   
+
+6. Local Prefixed Indexes
+
+Assuming the range_partitioning table is range partitioned on range_date, the followning are examples of local prefixed indexes.
+
+CREATE INDEX range_partitioning_idx ON range_partitioning (range_date) LOCAL;
+
+CREATE INDEX range_partitioning_idx ON range_partitioning (range_date) LOCAL
+(
+ PARTITION ranges_q1 TABLESPACE users,
+ PARTITION ranges_q2 TABLESPACE users,
+ PARTITION ranges_q3 TABLESPACE users,
+ PARTITION ranges_q4 TABLESPACE users
+);
+
+7. Local Non-Prefixed Indexes
+
+Assuming the range_partitioning table is range partitioned on range_date, the followning are examples of local prefixed indexes.
+local Non-Prefixed Index. The indexed column does not match the partition key.
+
+CREATE INDEX range_partitioning_idx ON range_partitioning (range_date) LOCAL
+(
+ PARTITION ranges_q1 TABLESPACE users,
+ PARTITION ranges_q2 TABLESPACE users,
+ PARTITION ranges_q3 TABLESPACE users,
+ PARTITION ranges_q4 TABLESPACE users
+);
+
+8. Global Prefixed Indexes
+
+Assuming the range_partitioning table is range partitioned on range_date, the followning examples is of a global prefixed index.
+
+CREATE INDEX range_partitioning_idx ON range_partitioning (range_date) GLOBAL 
+PARTITION BY RANGE (range_date)
+(
+ PARTITION ranges_q1 VALUES LESS THAN (TO_DATE('01/02/2017', 'DD/MM/YYYY')),
+ PARTITION ranges_q2 VALUES LESS THAN (TO_DATE('01/03/2017', 'DD/MM/YYYY')),
+ PARTITION ranges_q3 VALUES LESS THAN (TO_DATE('01/04/2017', 'DD/MM/YYYY')),
+ PARTITION ranges_q4 VALUES LESS THAN (TO_DATE('01/05/2017', 'DD/MM/YYYY'))
+);
+
+9. Global Non-Prefixed Indexes
+
+Oracle does not support Global Non Prefixed indexes.
