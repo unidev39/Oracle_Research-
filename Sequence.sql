@@ -314,3 +314,12 @@ BEGIN
     END LOOP;
 END;
 /
+
+CREATE SEQUENCE sq_reverse 
+START WITH 5
+INCREMENT BY -1
+MINVALUE 1             
+MAXVALUE 5 
+/
+
+SELECT sq_reverse.NEXTVAL FROM  dual;
