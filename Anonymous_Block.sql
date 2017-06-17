@@ -163,12 +163,93 @@ END;
 /
 
 DECLARE
-    l_message  CONSTANT VARCHAR2(5) := 'PASS';
+    l_message      VARCHAR2(100) := 'a' ;
 BEGIN
-    --l_message  :=  'FAIL';
+    Dbms_Output.Put_Line(l_message);
+    l_message := 'b'; 
+    Dbms_Output.Put_Line(l_message);
+END;
+/
+
+/*
+a
+b
+*/
+
+DECLARE
+    l_message      VARCHAR2(100) := 'a' ;
+BEGIN
+    Dbms_Output.Put_Line(l_message);
+    DECLARE 
+       l_message VARCHAR2(100) := 'b'; 
+    BEGIN
+        Dbms_Output.Put_Line(l_message);
+    END;
+    
+    Dbms_Output.Put_Line(l_message);
+END;
+/
+
+/*
+a                             
+b                             
+a                               
+*/
+
+DECLARE
+	  l_message  CONSTANT VARCHAR2(5) := 'PASS';
+BEGIN
+    l_message  :=  'FAIL';
     dbms_output.put_line(l_message);
 END;
 /
+/*
+ORA-06550: line 4, column 5:
+PLS-00363: expression 'L_MESSAGE' cannot be used as an assignment target
+ORA-06550: line 4, column 5:
+PL/SQL: Statement ignored
+*/
+
+DECLARE
+	  l_message  CONSTANT VARCHAR2(5);
+BEGIN
+    l_message  :=  'FAIL';
+    dbms_output.put_line(l_message);
+END;
+/
+/*
+ORA-06550: line 2, column 2:
+PLS-00322: declaration of a constant 'L_MESSAGE' must contain an initialization assignment
+ORA-06550: line 2, column 13:
+PL/SQL: Item ignored
+ORA-06550: line 4, column 5:
+PLS-00363: expression 'L_MESSAGE' cannot be used as an assignment target
+ORA-06550: line 4, column 5:
+PL/SQL: Statement ignored
+*/
+
+DECLARE
+	  l_message  CONSTANT VARCHAR2(5);
+BEGIN
+    dbms_output.put_line(l_message);
+END;
+/
+/*
+ORA-06550: line 2, column 4:
+PLS-00322: declaration of a constant 'L_MESSAGE' must contain an initialization assignment
+ORA-06550: line 2, column 15:
+PL/SQL: Item ignored
+*/
+
+DECLARE
+	  l_message  CONSTANT VARCHAR2(5) := 'PASS';
+BEGIN
+    dbms_output.put_line(l_message);
+END;
+/
+/*
+PASS
+*/
 
 -- To convert and check the data in proper formate
 --To check weather the given value is number OR not and to use the value for the arihematic operation.
