@@ -69,6 +69,15 @@ BEGIN
 END;
 /
 
+-- To display the output as in upper case
+DECLARE
+    l_message      VARCHAR2(1);
+BEGIN
+    l_message  :=  UPPER('a');
+    dbms_output.put_line(l_message);
+END;
+/
+
 --Anonymous block has not defined under a name.
 DECLARE
     (decleration statememt)
@@ -89,22 +98,6 @@ BEGIN
 END;
 / -- End of Main block
 
-
--- Print statement under a block
-BEGIN
-    Dbms_Output.put_line(33333||'Unidev');
-    Dbms_Output.Put_Line('Unidev');
-END;
-/
-
--- To display the output as in upper case
-DECLARE
-    l_message      VARCHAR2(1);
-BEGIN
-    l_message  :=  UPPER('a');
-    dbms_output.put_line(l_message);
-END;
-/
 DECLARE
     l_message      VARCHAR2(100);
 BEGIN
@@ -170,9 +163,9 @@ END;
 /
 
 DECLARE
-    l_message  CONSTANT NUMBER(2) := 1;
+    l_message  CONSTANT VARCHAR2(5) := 'PASS';
 BEGIN
-    --l_message  :=  2;
+    --l_message  :=  'FAIL';
     dbms_output.put_line(l_message);
 END;
 /
@@ -200,40 +193,49 @@ END;
 
 -- Play with character manipulation function using variables
 DECLARE
-    p_string    VARCHAR2 (100) :='ss6ss';
-    l_string    NUMBER;
+    l_string    VARCHAR2 (100) :='ss6ss';
+    l_char      NUMBER;
     l_data      NUMBER := 5;
 BEGIN
-    dbms_output.put_line('p_string: '||p_string);
-    dbms_output.put_line('l_data: '||l_data);
-    l_string := SUBSTR(p_string,INSTR(p_string,6,1),1);
     dbms_output.put_line('l_string: '||l_string);
-    dbms_output.put_line('l_string + l_data: '||l_string||'+'||l_data);
+    dbms_output.put_line('l_data: '||l_data);
+    l_char := SUBSTR(l_string,INSTR(l_string,6,1),1);
+    dbms_output.put_line('l_char: '||l_char);
+    dbms_output.put_line('l_char + l_data: '||l_char||'+'||l_data);
 END;
 /
 
 -- If Condition using operators
 DECLARE
-    p_message   VARCHAR2(1) := 'A';
+    l_message   VARCHAR2(1) := 'A';
 BEGIN
-    IF (p_message = 'A'  OR p_message = 'B') THEN
-       Dbms_Output.Put_Line('Pass: '||p_message);
+    IF (l_message = 'A'  OR l_message = 'B') THEN
+       Dbms_Output.Put_Line('Pass: '||l_message);
+    END IF;
+END;
+/
+
+DECLARE
+    l_message   VARCHAR2(1) := 'A';
+BEGIN
+    IF (l_message = 'A'  OR l_message = 'B') THEN
+       Dbms_Output.Put_Line('Pass: '||l_message);
     ELSE
-       Dbms_Output.Put_Line('Fail: '||p_message);
+       Dbms_Output.Put_Line('Fail: '||l_message);
     END IF;
 END;
 /
 
 -- If Condition using operators
 DECLARE
-    p_message   VARCHAR2(1) := 'A';
+    l_message   VARCHAR2(1) := 'A';
 BEGIN
-    IF (p_message = 'A'  AND  p_message = 'B') THEN
-       Dbms_Output.Put_Line('Pass: '||p_message);
-    ELSIF (p_message = 'B') THEN
-       Dbms_Output.Put_Line('Pass: '||p_message);
+    IF (l_message = 'A'  AND  l_message = 'B') THEN
+       Dbms_Output.Put_Line('Pass: '||l_message);
+    ELSIF (l_message = 'B') THEN
+       Dbms_Output.Put_Line('Pass: '||l_message);
     ELSE
-       Dbms_Output.Put_Line('Fail: '||p_message);
+       Dbms_Output.Put_Line('Fail: '||l_message);
     END IF;
 END;
 /
