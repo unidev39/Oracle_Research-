@@ -97,14 +97,43 @@ BEGIN
 END;
 /
 
-
-
 -- To display the output as in upper case
 DECLARE
     l_message      VARCHAR2(1);
 BEGIN
     l_message  :=  UPPER('a');
     dbms_output.put_line(l_message);
+END;
+/
+DECLARE
+    l_message      VARCHAR2(100);
+BEGIN
+    Dbms_Output.Put_Line('Block 1');
+    BEGIN
+        l_message  :=  To_number('abc');
+        dbms_output.put_line(l_message);
+    EXCEPTION WHEN OTHERS THEN
+        Dbms_Output.Put_Line('Block 2');
+    END;
+    
+    BEGIN
+        l_message  :=  To_number('abc');         
+        dbms_output.put_line(l_message);    
+    --EXCEPTION WHEN OTHERS THEN
+        --Dbms_Output.Put_Line('Block 3');
+    END;
+
+    BEGIN
+        l_message  :=  To_number('abc');
+        dbms_output.put_line(l_message);
+    EXCEPTION WHEN OTHERS THEN
+        Dbms_Output.Put_Line('Block 4');
+    END;
+
+    l_message  :=  To_char('abc');
+    Dbms_Output.Put_Line(l_message);
+EXCEPTION WHEN OTHERS THEN
+    Dbms_Output.Put_Line('Block 1');
 END;
 /
 
