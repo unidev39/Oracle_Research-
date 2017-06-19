@@ -686,4 +686,4 @@ Alternatively, you can delete the rows and then truncate the partition.
 The following example deletes all the data in the part_17 partition and deallocates the freed space:
 
 ALTER TABLE shipments
-  TRUNCATE PARTITION part_17 DROP STORAGE;
+  TRUNCATE PARTITION part_17 DROP STORAGE; 
