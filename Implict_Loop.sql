@@ -871,3 +871,22 @@ BEGIN
      END LOOP;
 END;
 /
+			       
+DECLARE
+    l_count number(8) := 0;
+    l_sql   varchar2(500);
+BEGIN
+    for i in (select table_name from user_tab_partitions)
+    loop
+       begin
+           l_sql := 'select count(*) rec from '||i.table_name||' ';
+           execute immediate (l_sql) INTO  l_count;
+           if (l_count > 0) then
+               dbms_output.put_line(i.table_name ||' => '|| l_count);
+           else 
+               dbms_output.put_line(i.table_name ||' => '|| l_count);
+           end if;
+       end;
+    end loop;
+end;
+/
