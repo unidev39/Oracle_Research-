@@ -473,31 +473,72 @@ Non-Prefixed - Does not support partition pruning, but is effective in accessing
 			   
 
 6. Local Prefixed Indexes
-
 Assuming the range_partitioning table is range partitioned on range_date, the followning are examples of local prefixed indexes.
 
-CREATE INDEX range_partitioning_idx ON range_partitioning (range_date) LOCAL;
-
-CREATE INDEX range_partitioning_idx ON range_partitioning (range_date) LOCAL
-(
- PARTITION ranges_q1 TABLESPACE users,
- PARTITION ranges_q2 TABLESPACE users,
- PARTITION ranges_q3 TABLESPACE users,
- PARTITION ranges_q4 TABLESPACE users
-);
-
 7. Local Non-Prefixed Indexes
-
 Assuming the range_partitioning table is range partitioned on range_date, the followning are examples of local Non-Prefixed Index. 
 The indexed column does not match the partition key.
 
-CREATE INDEX range_partitioning_idx ON range_partitioning (range_date) LOCAL
+6.7.
+CREATE TABLE partitioned_test_table
+( 
+  a    INT,
+  b    INT,
+  data CHAR(20)
+)
+PARTITION BY RANGE (a)
 (
- PARTITION ranges_q1 TABLESPACE users,
- PARTITION ranges_q2 TABLESPACE users,
- PARTITION ranges_q3 TABLESPACE users,
- PARTITION ranges_q4 TABLESPACE users
+ PARTITION part_1 VALUES LESS THAN(2),
+ PARTITION part_2 VALUES LESS THAN(3)
 );
+
+CREATE INDEX local_prefixed ON partitioned_test_table (a,b) LOCAL;
+
+CREATE INDEX local_nonprefixed ON partitioned_test_table (b) LOCAL;
+
+INSERT INTO partitioned_test_table
+SELECT 
+     MOD(ROWNUM-1,2)+1, 
+	   ROWNUM, 
+	   'x'
+FROM 
+     all_objects;
+
+BEGIN
+   dbms_stats.gather_table_stats(user,'PARTITIONED_TEST_TABLE',cascade=>TRUE );
+END;
+/
+
+SELECT * FROM partitioned_test_table WHERE a = 1 AND b = 1;
+
+EXPLAIN PLAN FOR SELECT * FROM partitioned_test_table WHERE a = 1 AND b = 1;
+
+SELECT * FROM TABLE(dbms_xplan.display);
+/*
+-----------------------------------------------------------------------------------------------------------------------------
+| Id  | Operation                          | Name                   | Rows  | Bytes | Cost (%CPU)| Time     | Pstart| Pstop |
+-----------------------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                   |                        |     1 |    29 |     2   (0)| 00:00:01 |       |       |
+|   1 |  PARTITION RANGE SINGLE            |                        |     1 |    29 |     2   (0)| 00:00:01 |     1 |     1 |
+|   2 |   TABLE ACCESS BY LOCAL INDEX ROWID| PARTITIONED_TEST_TABLE |     1 |    29 |     2   (0)| 00:00:01 |     1 |     1 |
+|*  3 |    INDEX RANGE SCAN                | LOCAL_PREFIXED         |     1 |       |     1   (0)| 00:00:01 |     1 |     1 |
+-----------------------------------------------------------------------------------------------------------------------------
+*/
+
+SELECT * FROM partitioned_test_table WHERE  b = 1;
+EXPLAIN PLAN FOR SELECT * FROM partitioned_test_table WHERE b = 1;
+
+SELECT * FROM TABLE(dbms_xplan.display);
+/* 
+-----------------------------------------------------------------------------------------------------------------------------
+| Id  | Operation                          | Name                   | Rows  | Bytes | Cost (%CPU)| Time     | Pstart| Pstop |
+-----------------------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                   |                        |     1 |    29 |     4   (0)| 00:00:01 |       |       |
+|   1 |  PARTITION RANGE ALL               |                        |     1 |    29 |     4   (0)| 00:00:01 |     1 |     2 |
+|   2 |   TABLE ACCESS BY LOCAL INDEX ROWID| PARTITIONED_TEST_TABLE |     1 |    29 |     4   (0)| 00:00:01 |     1 |     2 |
+|*  3 |    INDEX RANGE SCAN                | LOCAL_NONPREFIXED      |     1 |       |     3   (0)| 00:00:01 |     1 |     2 |
+-----------------------------------------------------------------------------------------------------------------------------
+*/
 
 8. Global Prefixed Indexes
 
