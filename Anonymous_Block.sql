@@ -698,3 +698,102 @@ EXCEPTION WHEN OTHERS THEN
     END IF;
 END;
 /
+
+DECLARE
+    l_sql VARCHAR2(32767);
+BEGIN
+    l_sql := '      ''TEST5''                                          object_name,
+	           		sql_text                                           operation,
+                    SYSTIMESTAMP                                       operation_time,
+                    SYS_CONTEXT(''USERENV'', ''SESSION_USER'')         session_user,
+                    SYS_CONTEXT(''USERENV'', ''CURRENT_SCHEMA'')       current_schema,
+                    SYS_CONTEXT(''USERENV'', ''INSTANCE_NAME'')        instance_name,
+                    SYS_CONTEXT(''USERENV'', ''DB_NAME'')              db_name,
+                    SYS_CONTEXT(''USERENV'', ''SID'')                  sid,
+                    SYS_CONTEXT(''USERENV'', ''IDENTIFICATION_TYPE'')  identification_type,
+                    SYS_CONTEXT(''USERENV'', ''INSTANCE'')             instance,
+                    SYS_CONTEXT(''USERENV'', ''ISDBA'')                isdba,
+                    SYS_CONTEXT(''USERENV'', ''SERVER_HOST'')          server_host,
+                    SYS_CONTEXT(''USERENV'', ''HOST'')                 hosts,
+                    SYS_CONTEXT(''USERENV'', ''IP_ADDRESS'')           ip_address,
+                    SYS_CONTEXT(''USERENV'', ''OS_USER'')              os_user
+               FROM 
+                    sys.gv_$sqltext
+               WHERE 
+                   regexp_like(UPPER(sql_text),''(TEST5)'')';
+	DBMS_OUTPUT.PUT_LINE('INSERT INTO test6
+                          SELECT 
+                               ''INSERT''     operation_type,
+                               '||l_sql||'
+                          AND regexp_like(UPPER(sql_text),''(INSERT)'')');	 
+	DBMS_OUTPUT.PUT_LINE('INSERT INTO test6
+                          SELECT 
+                               ''UPDATE''     operation_type,
+                               '||l_sql||'
+                          AND regexp_like(UPPER(sql_text),''(UPDATE)'')');
+	DBMS_OUTPUT.PUT_LINE('INSERT INTO test6
+                          SELECT 
+                               ''DELETE''     operation_type,
+                               '||l_sql||'
+                          AND regexp_like(UPPER(sql_text),''(DELETE)'')');
+END;
+/	
+CREATE TABLE TEST6
+(
+   operation_type           VARCHAR2(50),
+   object_name              VARCHAR2(50),
+   operation                VARCHAR2(4000),
+   operation_time           TIMESTAMP,
+   session_user             VARCHAR2(50),
+   current_schema           VARCHAR2(50),
+   instance_name            VARCHAR2(50),
+   db_name                  VARCHAR2(50),
+   sid                      VARCHAR2(50),
+   identification_type      VARCHAR2(50),
+   instance                 VARCHAR2(50),
+   isdba                    VARCHAR2(50),
+   server_host              VARCHAR2(50),
+   hosts                    VARCHAR2(50),
+   ip_address               VARCHAR2(50),
+   os_user                  VARCHAR2(50)
+);
+				   
+DECLARE
+    l_sql VARCHAR2(32767);
+BEGIN
+    l_sql := '      ''TEST5''                                          object_name,
+	           		sql_text                                           operation,
+                    SYSTIMESTAMP                                       operation_time,
+                    SYS_CONTEXT(''USERENV'', ''SESSION_USER'')         session_user,
+                    SYS_CONTEXT(''USERENV'', ''CURRENT_SCHEMA'')       current_schema,
+                    SYS_CONTEXT(''USERENV'', ''INSTANCE_NAME'')        instance_name,
+                    SYS_CONTEXT(''USERENV'', ''DB_NAME'')              db_name,
+                    SYS_CONTEXT(''USERENV'', ''SID'')                  sid,
+                    SYS_CONTEXT(''USERENV'', ''IDENTIFICATION_TYPE'')  identification_type,
+                    SYS_CONTEXT(''USERENV'', ''INSTANCE'')             instance,
+                    SYS_CONTEXT(''USERENV'', ''ISDBA'')                isdba,
+                    SYS_CONTEXT(''USERENV'', ''SERVER_HOST'')          server_host,
+                    SYS_CONTEXT(''USERENV'', ''HOST'')                 hosts,
+                    SYS_CONTEXT(''USERENV'', ''IP_ADDRESS'')           ip_address,
+                    SYS_CONTEXT(''USERENV'', ''OS_USER'')              os_user
+               FROM 
+                    sys.gv_$sqltext
+               WHERE 
+                   regexp_like(UPPER(sql_text),''(TEST5)'')';
+	EXECUTE IMMEDIATE 'INSERT INTO test6
+                          SELECT 
+                               ''INSERT''     operation_type,
+                               '||l_sql||'
+                          AND regexp_like(UPPER(sql_text),''(INSERT)'')';	 
+	EXECUTE IMMEDIATE 'INSERT INTO test6
+                          SELECT 
+                               ''UPDATE''     operation_type,
+                               '||l_sql||'
+                          AND regexp_like(UPPER(sql_text),''(UPDATE)'')';
+	EXECUTE IMMEDIATE 'INSERT INTO test6
+                          SELECT 
+                               ''DELETE''     operation_type,
+                               '||l_sql||'
+                          AND regexp_like(UPPER(sql_text),''(DELETE)'')';
+END;
+/
