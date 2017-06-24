@@ -470,6 +470,41 @@ END;
 SELECT EMPLOYEE_ID FROM EMPLOYEES WHERE EMPLOYEE_ID=999;
 
 DECLARE
+    l_empid        NUMBER := 199;
+    l_sql          VARCHAR2(32767) := 'SELECT ';
+BEGIN
+    l_sql employee_id INTO l_empid FROM EMPLOYEES where employee_id = 199;
+    dbms_output.put_line(l_empid);
+END;
+/ 
+			       
+DECLARE
+    l_empid        NUMBER := 199;
+    l_sql          VARCHAR2(32767) := 'SELECT ';
+BEGIN
+    l_sql := ''||l_sql||' employee_id FROM EMPLOYEES where employee_id = 199';
+    EXECUTE IMMEDIATE l_sql INTO l_empid;
+    dbms_output.put_line(l_empid);
+END;
+/
+
+DECLARE
+    l_empid        NUMBER := 199;
+    l_sql          VARCHAR2(32767) := 'AAA';
+BEGIN
+    SELECT employee_id INTO l_empid FROM EMPLOYEES where employee_id = l_empid;
+    dbms_output.put_line(l_empid);
+
+    l_sql := Lower(l_sql);
+    Dbms_Output.Put_Line(l_sql);
+    
+    SELECT InitCap(l_sql) INTO l_sql FROM dual;
+    Dbms_Output.Put_Line(l_sql);
+      
+END;
+/
+
+DECLARE
     l_employee_id  NUMBER := 9999;
     l_empid        NUMBER;
     l_sql          VARCHAR2(32767);
