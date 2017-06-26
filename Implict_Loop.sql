@@ -217,28 +217,221 @@ one that exits the inner loop and one that exits the outer loop.
 
 Example 4-11 Nested, Labeled Basic LOOP Statements with EXIT WHEN Statements
 DECLARE
-	l_s  PLS_INTEGER := 0;
-	l_i  PLS_INTEGER := 0;
-	l_j  PLS_INTEGER;
+    l_s  PLS_INTEGER := 0;
+    l_i  PLS_INTEGER := 0;
+    l_j  PLS_INTEGER;
 BEGIN
-	<<outer_loop>>
-	LOOP
-	   l_i := l_i + 1;
-	   l_j := 0;
-	   <<inner_loop>>
-	   LOOP
-	      l_j := l_j + 1;
-	      l_s := l_s + l_i * l_j; -- Sum several products
-	      EXIT inner_loop WHEN (l_j > 5);
-	      EXIT outer_loop WHEN ((l_i * l_j) > 15);
-	   END LOOP inner_loop;
-	END LOOP outer_loop;
-	dbms_output.put_line('The sum of products equals: '||TO_CHAR(l_s));
+    <<outer_loop>>
+    LOOP
+       l_i := l_i + 1;
+       l_j := 0;
+       <<inner_loop>>
+       LOOP
+          l_j := l_j + 1;
+          l_s := l_s + l_i * l_j;
+        EXIT inner_loop WHEN (l_j > 5);
+        EXIT outer_loop WHEN ((l_i * l_j) > 15);
+       END LOOP inner_loop;
+    END LOOP outer_loop;
+    dbms_output.put_line('The sum of products equals: l_s = '||l_s);
 END;
 /
-
 /*
-The sum of products equals: 166
+The sum of products equals: l_s = 166
+*/
+
+DECLARE
+    l_s  PLS_INTEGER := 0;
+    l_i  PLS_INTEGER := 0;
+    l_j  PLS_INTEGER;
+BEGIN
+    <<outer_loop>>
+    LOOP
+       l_i := l_i + 1;
+       l_j := 0;
+       <<inner_loop>>
+       LOOP
+          l_j := l_j + 1;
+        Dbms_Output.Put_Line('<<inner_loop>> '||l_j||' := '||l_j||' + 1 <= l_j = '||l_j);
+          l_s := l_s + l_i * l_j;
+        Dbms_Output.Put_Line('<<inner_loop>> '||l_s||' := '||l_s||' + '||l_i||' * '||l_j||' <= l_s = '||l_s);
+          
+        EXIT inner_loop WHEN (l_j > 5);
+        Dbms_Output.Put_Line('<<inner_loop>> '||l_j||' > 5');
+
+        Dbms_Output.Put_Line('<<outer_loop>> '||l_i||' * '||l_j||' > 15');
+           EXIT outer_loop WHEN ((l_i * l_j) > 15);
+       END LOOP inner_loop;
+    END LOOP outer_loop;
+    dbms_output.put_line('The sum of products equals: l_s = '||l_s);
+END;
+/
+/*
+<<inner_loop>> 1 := 1 + 1 <= l_j = 1          
+<<inner_loop>> 1 := 1 + 1 * 1 <= l_s = 1      
+<<inner_loop>> 1 > 5                          
+<<outer_loop>> 1 * 1 > 15                     
+<<inner_loop>> 2 := 2 + 1 <= l_j = 2          
+<<inner_loop>> 3 := 3 + 1 * 2 <= l_s = 3      
+<<inner_loop>> 2 > 5                          
+<<outer_loop>> 1 * 2 > 15                     
+<<inner_loop>> 3 := 3 + 1 <= l_j = 3          
+<<inner_loop>> 6 := 6 + 1 * 3 <= l_s = 6      
+<<inner_loop>> 3 > 5                          
+<<outer_loop>> 1 * 3 > 15                     
+<<inner_loop>> 4 := 4 + 1 <= l_j = 4          
+<<inner_loop>> 10 := 10 + 1 * 4 <= l_s = 10   
+<<inner_loop>> 4 > 5                          
+<<outer_loop>> 1 * 4 > 15                     
+<<inner_loop>> 5 := 5 + 1 <= l_j = 5          
+<<inner_loop>> 15 := 15 + 1 * 5 <= l_s = 15   
+<<inner_loop>> 5 > 5                          
+<<outer_loop>> 1 * 5 > 15                     
+<<inner_loop>> 6 := 6 + 1 <= l_j = 6          
+<<inner_loop>> 21 := 21 + 1 * 6 <= l_s = 21   
+<<inner_loop>> 1 := 1 + 1 <= l_j = 1          
+<<inner_loop>> 23 := 23 + 2 * 1 <= l_s = 23   
+<<inner_loop>> 1 > 5                          
+<<outer_loop>> 2 * 1 > 15                     
+<<inner_loop>> 2 := 2 + 1 <= l_j = 2          
+<<inner_loop>> 27 := 27 + 2 * 2 <= l_s = 27   
+<<inner_loop>> 2 > 5                          
+<<outer_loop>> 2 * 2 > 15                     
+<<inner_loop>> 3 := 3 + 1 <= l_j = 3          
+<<inner_loop>> 33 := 33 + 2 * 3 <= l_s = 33   
+<<inner_loop>> 3 > 5                          
+<<outer_loop>> 2 * 3 > 15                     
+<<inner_loop>> 4 := 4 + 1 <= l_j = 4          
+<<inner_loop>> 41 := 41 + 2 * 4 <= l_s = 41   
+<<inner_loop>> 4 > 5                          
+<<outer_loop>> 2 * 4 > 15                     
+<<inner_loop>> 5 := 5 + 1 <= l_j = 5          
+<<inner_loop>> 51 := 51 + 2 * 5 <= l_s = 51   
+<<inner_loop>> 5 > 5                          
+<<outer_loop>> 2 * 5 > 15                     
+<<inner_loop>> 6 := 6 + 1 <= l_j = 6          
+<<inner_loop>> 63 := 63 + 2 * 6 <= l_s = 63   
+<<inner_loop>> 1 := 1 + 1 <= l_j = 1          
+<<inner_loop>> 66 := 66 + 3 * 1 <= l_s = 66   
+<<inner_loop>> 1 > 5                          
+<<outer_loop>> 3 * 1 > 15                     
+<<inner_loop>> 2 := 2 + 1 <= l_j = 2          
+<<inner_loop>> 72 := 72 + 3 * 2 <= l_s = 72   
+<<inner_loop>> 2 > 5                          
+<<outer_loop>> 3 * 2 > 15                     
+<<inner_loop>> 3 := 3 + 1 <= l_j = 3          
+<<inner_loop>> 81 := 81 + 3 * 3 <= l_s = 81   
+<<inner_loop>> 3 > 5                          
+<<outer_loop>> 3 * 3 > 15                     
+<<inner_loop>> 4 := 4 + 1 <= l_j = 4          
+<<inner_loop>> 93 := 93 + 3 * 4 <= l_s = 93   
+<<inner_loop>> 4 > 5                          
+<<outer_loop>> 3 * 4 > 15                     
+<<inner_loop>> 5 := 5 + 1 <= l_j = 5          
+<<inner_loop>> 108 := 108 + 3 * 5 <= l_s = 108
+<<inner_loop>> 5 > 5                          
+<<outer_loop>> 3 * 5 > 15                     
+<<inner_loop>> 6 := 6 + 1 <= l_j = 6          
+<<inner_loop>> 126 := 126 + 3 * 6 <= l_s = 126
+<<inner_loop>> 1 := 1 + 1 <= l_j = 1          
+<<inner_loop>> 130 := 130 + 4 * 1 <= l_s = 130
+<<inner_loop>> 1 > 5                          
+<<outer_loop>> 4 * 1 > 15                     
+<<inner_loop>> 2 := 2 + 1 <= l_j = 2          
+<<inner_loop>> 138 := 138 + 4 * 2 <= l_s = 138
+<<inner_loop>> 2 > 5                          
+<<outer_loop>> 4 * 2 > 15                     
+<<inner_loop>> 3 := 3 + 1 <= l_j = 3          
+<<inner_loop>> 150 := 150 + 4 * 3 <= l_s = 150
+<<inner_loop>> 3 > 5                          
+<<outer_loop>> 4 * 3 > 15                     
+<<inner_loop>> 4 := 4 + 1 <= l_j = 4          
+<<inner_loop>> 166 := 166 + 4 * 4 <= l_s = 166
+<<inner_loop>> 4 > 5                          
+<<outer_loop>> 4 * 4 > 15                     
+The sum of products equals: l_s = 166
+*/
+
+DECLARE
+    l_s  PLS_INTEGER := 0;
+    l_i  PLS_INTEGER := 0;
+    l_j  PLS_INTEGER;
+BEGIN
+    <<outer_loop>>
+    LOOP
+       l_i := l_i + 1;
+       l_j := 0;
+       <<inner_loop>>
+       LOOP
+          l_j := l_j + 1;
+        Dbms_Output.Put_Line('<<inner_loop>> '||l_j||' := '||l_j||' + 1 <= l_j = '||l_j);
+          l_s := l_s + l_i * l_j;
+        Dbms_Output.Put_Line('<<inner_loop>> '||l_s||' := '||l_s||' + '||l_i||' * '||l_j||' <= l_s = '||l_s);
+          EXIT inner_loop WHEN (l_j > 5);
+        Dbms_Output.Put_Line('<<inner_loop>> '||l_j||' > 5');
+       END LOOP inner_loop;
+        Dbms_Output.Put_Line('<<outer_loop>> '||l_i||' * '||l_j||' > 15');
+           EXIT outer_loop WHEN ((l_i * l_j) > 15);
+    END LOOP outer_loop;
+    dbms_output.put_line('The sum of products equals: l_s = '||l_s);
+END;
+/
+/*
+<<inner_loop>> 1 := 1 + 1 <= l_j = 1          
+<<inner_loop>> 1 := 1 + 1 * 1 <= l_s = 1      
+<<inner_loop>> 1 > 5                          
+<<inner_loop>> 2 := 2 + 1 <= l_j = 2          
+<<inner_loop>> 3 := 3 + 1 * 2 <= l_s = 3      
+<<inner_loop>> 2 > 5                          
+<<inner_loop>> 3 := 3 + 1 <= l_j = 3          
+<<inner_loop>> 6 := 6 + 1 * 3 <= l_s = 6      
+<<inner_loop>> 3 > 5                          
+<<inner_loop>> 4 := 4 + 1 <= l_j = 4          
+<<inner_loop>> 10 := 10 + 1 * 4 <= l_s = 10   
+<<inner_loop>> 4 > 5                          
+<<inner_loop>> 5 := 5 + 1 <= l_j = 5          
+<<inner_loop>> 15 := 15 + 1 * 5 <= l_s = 15   
+<<inner_loop>> 5 > 5                          
+<<inner_loop>> 6 := 6 + 1 <= l_j = 6          
+<<inner_loop>> 21 := 21 + 1 * 6 <= l_s = 21   
+<<outer_loop>> 1 * 6 > 15                     
+<<inner_loop>> 1 := 1 + 1 <= l_j = 1          
+<<inner_loop>> 23 := 23 + 2 * 1 <= l_s = 23   
+<<inner_loop>> 1 > 5                          
+<<inner_loop>> 2 := 2 + 1 <= l_j = 2          
+<<inner_loop>> 27 := 27 + 2 * 2 <= l_s = 27   
+<<inner_loop>> 2 > 5                          
+<<inner_loop>> 3 := 3 + 1 <= l_j = 3          
+<<inner_loop>> 33 := 33 + 2 * 3 <= l_s = 33   
+<<inner_loop>> 3 > 5                          
+<<inner_loop>> 4 := 4 + 1 <= l_j = 4          
+<<inner_loop>> 41 := 41 + 2 * 4 <= l_s = 41   
+<<inner_loop>> 4 > 5                          
+<<inner_loop>> 5 := 5 + 1 <= l_j = 5          
+<<inner_loop>> 51 := 51 + 2 * 5 <= l_s = 51   
+<<inner_loop>> 5 > 5                          
+<<inner_loop>> 6 := 6 + 1 <= l_j = 6          
+<<inner_loop>> 63 := 63 + 2 * 6 <= l_s = 63   
+<<outer_loop>> 2 * 6 > 15                     
+<<inner_loop>> 1 := 1 + 1 <= l_j = 1          
+<<inner_loop>> 66 := 66 + 3 * 1 <= l_s = 66   
+<<inner_loop>> 1 > 5                          
+<<inner_loop>> 2 := 2 + 1 <= l_j = 2          
+<<inner_loop>> 72 := 72 + 3 * 2 <= l_s = 72   
+<<inner_loop>> 2 > 5                          
+<<inner_loop>> 3 := 3 + 1 <= l_j = 3          
+<<inner_loop>> 81 := 81 + 3 * 3 <= l_s = 81   
+<<inner_loop>> 3 > 5                          
+<<inner_loop>> 4 := 4 + 1 <= l_j = 4          
+<<inner_loop>> 93 := 93 + 3 * 4 <= l_s = 93   
+<<inner_loop>> 4 > 5                          
+<<inner_loop>> 5 := 5 + 1 <= l_j = 5          
+<<inner_loop>> 108 := 108 + 3 * 5 <= l_s = 108
+<<inner_loop>> 5 > 5                          
+<<inner_loop>> 6 := 6 + 1 <= l_j = 6          
+<<inner_loop>> 126 := 126 + 3 * 6 <= l_s = 126
+<<outer_loop>> 3 * 6 > 15                     
+The sum of products equals: l_s = 126                           
 */
 
 4.1.7.GOTO Statement
