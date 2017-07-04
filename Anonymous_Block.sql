@@ -832,3 +832,24 @@ BEGIN
                           AND regexp_like(UPPER(sql_text),''(DELETE)'')';
 END;
 /
+				   
+DECLARE 
+    l_column_name VARCHAR2(35);
+BEGIN
+    FOR i IN (SELECT table_name FROM all_tables WHERE owner = 'HR')
+    LOOP
+       BEGIN
+          FOR j IN (SELECT column_name FROM all_tab_cols WHERE owner = 'HR' AND table_name = i.table_name)
+          LOOP
+             BEGIN
+                 EXECUTE IMMEDIATE 'SELECT '||j.column_name||' FROM '||i.table_name||' WHERE '||j.column_name||' = 199' INTO l_column_name;
+                 Dbms_Output.Put_Line(l_column_name||' => '||i.table_name||' => '||j.column_name);
+             EXCEPTION WHEN OTHERS THEN
+                 NULL;
+             END;
+          END LOOP;
+       END;
+    END LOOP;
+END;
+/
+
