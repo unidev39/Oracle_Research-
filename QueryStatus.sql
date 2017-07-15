@@ -27,7 +27,7 @@ FROM (
       FROM
            dba_objects b
      ) ob
-ON (lo.object_id = ob.object_id)
+ON (lo.object_id = ob.object_id);
 AND lo.oracle_username = 'HR';
 
 SELECT 
@@ -88,12 +88,15 @@ WHERE
                   AND b.parsing_schema_name = USER
                  );
 
+-- To find the current query run time 
 SELECT 
      l.opname                             opname,
      l.target                             target,
+     l.message                            message,
      ROUND((l.sofar/l.totalwork),4) * 100 Percentage_Complete,
      l.start_time                         start_time,
      CEIL(l.time_remaining/60)            Max_Time_Remaining_In_Min,
+     l.time_remaining                     time_remaining_in_second,
      FLOOR( l.elapsed_seconds / 60 )      Time_Spent_In_Min,
      ar.sql_fulltext                      sql_fulltext,
      ar.parsing_schema_name               parsing_schema_name,
@@ -105,6 +108,26 @@ WHERE
 AND  l.totalwork > 0
 AND  ar.users_executing > 0
 AND  l.sofar != l.totalwork;
+
+-- To find Current running query
+SELECT 
+     s.username,
+     s.osuser,
+     s.sid,
+     s.serial#,
+     t.sql_id,
+     t.piece,
+     t.sql_text
+FROM 
+     v$sqltext_with_newlines t, v$session s
+WHERE 
+     t.address = s.sql_address
+AND  t.hash_value = s.sql_hash_value
+AND  s.status = 'ACTIVE'
+AND  s.username NOT IN ('SYSTEM',USER)
+ORDER BY 
+     s.sid,
+     t.piece;
 
 -- To find the degree of table
 SELECT 
