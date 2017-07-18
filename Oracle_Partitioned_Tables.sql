@@ -710,6 +710,101 @@ ALTER TABLE trains
          PARTITION station9 TABLESPACE train010 )
   PARALLEL ( DEGREE 9 );
   
+DROP TABLE partition_split PURGE;
+CREATE TABLE partition_split 
+( 
+  col_pk_key VARCHAR2(20) NOT NULL, 
+  col_pk_id  NUMBER(1)    NOT NULL 
+) 
+PARTITION BY RANGE (col_pk_id) 
+( 
+ PARTITION par_1 VALUES LESS THAN (1),
+ PARTITION par_2 VALUES LESS THAN (2),
+ PARTITION par_maxvalue VALUES LESS THAN (MAXVALUE)
+);
+
+TRUNCATE TABLE partition_split;
+INSERT INTO partition_split (col_pk_key,col_pk_id) VALUES('par_1',0);
+SELECT * FROM partition_split PARTITION (par_1);
+/*
+COL_PK_KEY COL_PK_ID
+---------- ---------
+par_1              0
+*/
+
+INSERT INTO partition_split (col_pk_key,col_pk_id) VALUES('par_2',1);
+SELECT * FROM partition_split PARTITION (par_2);
+/*
+COL_PK_KEY COL_PK_ID
+---------- ---------
+par_2              1
+*/
+INSERT INTO partition_split (col_pk_key,col_pk_id) VALUES('par_maxvalue',2);
+SELECT * FROM partition_split PARTITION (par_maxvalue);
+/*
+COL_PK_KEY   COL_PK_ID
+------------ ---------
+par_maxvalue         2
+*/
+COMMIT;
+
+SELECT * FROM partition_split;
+/*
+COL_PK_KEY   COL_PK_ID
+------------ ---------
+par_1                0
+par_2                1
+par_maxvalue         2
+*/
+
+ALTER TABLE partition_split SPLIT PARTITION par_maxvalue AT (3) 
+INTO 
+(
+ PARTITION par_3, 
+ PARTITION par_maxvalue
+); 
+
+/*
+CREATE TABLE partition_split 
+( 
+  col_pk_key NUMBER(15) NOT NULL, 
+  col_pk_id  NUMBER(1) NOT NULL 
+) 
+PARTITION BY RANGE (col_pk_id) 
+( 
+ PARTITION par_1 VALUES LESS THAN (1),
+ PARTITION par_2 VALUES LESS THAN (2),
+ PARTITION par_3 VALUES LESS THAN (2),
+ PARTITION par_maxvalue VALUES LESS THAN (MAXVALUE)
+);
+*/
+
+INSERT INTO partition_split (col_pk_key,col_pk_id) VALUES('par_3',2);
+SELECT * FROM partition_split PARTITION (par_maxvalue);
+/*
+COL_PK_KEY COL_PK_ID
+---------- ---------
+*/
+
+SELECT * FROM partition_split PARTITION (par_3);
+/*
+COL_PK_KEY   COL_PK_ID
+------------ ---------
+par_maxvalue         2
+par_3                2
+
+*/
+
+SELECT * FROM partition_split;
+/*
+COL_PK_KEY   COL_PK_ID
+------------ ---------
+par_1                0
+par_2                1
+par_maxvalue         2
+par_3                2
+*/
+  
 8. TRUNCATE PARTITION
 
 Use TRUNCATE PARTITION to remove all rows from a partition in a table. Freed space is deallocated or reused depending on whether 
