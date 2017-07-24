@@ -1,3 +1,42 @@
+LOCKED_MODE
+
+Lock mode. The numeric values for this column map to these text values for the lock modes for table locks:
+
+  0 - NONE: lock requested but not yet obtained
+  1 - NULL
+  2 - ROWS_S (SS): Row Share Lock
+  3 - ROW_X (SX): Row Exclusive Table Lock
+  4 - SHARE (S): Share Table Lock
+  5 - S/ROW-X (SSX): Share Row Exclusive Table Lock
+  6 - Exclusive (X): Exclusive Table Lock
+  
+Table Locks (TM)
+A table lock, also called a TM lock, is acquired by a transaction when a table is modified by an INSERT, UPDATE, DELETE, MERGE, SELECT with the FOR UPDATE 
+clause, or LOCK TABLE statement. DML operations require table locks to reserve DML access to the table on behalf of a transaction and to prevent 
+DDL operations that would conflict with the transaction.
+
+A table lock can be held in any of the following modes:
+
+2 => Row Share (RS) : This lock, also called a subshare table lock (SS), indicates that the transaction holding the lock on the table has locked rows in 
+                      the table and intends to update them. A row share lock is the least restrictive mode of table lock, offering the highest degree of 
+                      concurrency for a table.
+
+3 => Row Exclusive Table Lock (RX) : This lock, also called a subexclusive table lock (SX), generally indicates that the transaction holding the lock has 
+                                     updated table rows or issued SELECT ... FOR UPDATE. An SX lock allows other transactions to query, insert, update, 
+                                     delete, or lock rows concurrently in the same table. Therefore, SX locks allow multiple transactions to obtain 
+                                     simultaneous SX and subshare table locks for the same table.
+
+4 => Share Table Lock (S) : A share table lock held by a transaction allows other transactions to query the table (without using SELECT ... FOR UPDATE), 
+                            but updates are allowed only if a single transaction holds the share table lock. Because multiple transactions may hold a 
+                            share table lock concurrently, holding this lock is not sufficient to ensure that a transaction can modify the table.
+
+5 => Share Row Exclusive Table Lock (SRX) : This lock, also called a share-subexclusive table lock (SSX), is more restrictive than a share table lock. 
+                                            Only one transaction at a time can acquire an SSX lock on a given table. An SSX lock held by a transaction 
+                                            allows other transactions to query the table (except for SELECT ... FOR UPDATE) but not to update the table.
+
+6 => Exclusive Table Lock (X) : This lock is the most restrictive, prohibiting other transactions from performing any type of DML statement or placing 
+                                any type of lock on the table.
+
 -- To find the locks
 SELECT 
      lo.session_id,
