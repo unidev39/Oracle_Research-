@@ -43,3 +43,16 @@ BEGIN
   RETURN RTRIM(utl_raw.cast_to_varchar2(l_decrypted), '~');
 END fn_decrypt;
 /
+
+
+-- To fetch the user creation ddl
+SELECT 
+   dbms_metadata.get_ddl('USER', username) || '/' usercreate ,username
+FROM 
+   dba_users WHERE username = 'HR';
+
+-- To show the user password
+SELECT NAME,PASSWORD FROM SYS.USER$ WHERE NAME='HR';
+
+-- To reset the password
+ALTER USER  hr IDENTIFIED BY VALUE '57B18BF5C73804C5';
