@@ -50,6 +50,12 @@ SELECT
    dbms_metadata.get_ddl('USER', username) || '/' usercreate ,username
 FROM 
    dba_users WHERE username = 'HR';
+   
+-- Or
+SELECT
+     dbms_metadata.get_ddl('USER', 'HR') user_ddl
+FROM 
+     dual;
 
 -- To show the user password
 SELECT NAME,PASSWORD FROM SYS.USER$ WHERE NAME='HR';
