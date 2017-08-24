@@ -553,6 +553,18 @@ PARTITION BY RANGE (range_date)
  PARTITION ranges_q4 VALUES LESS THAN (TO_DATE('01/05/2017', 'DD/MM/YYYY'))
 );
 
+DROP INDEX uk_range_partitioning_idx;
+CREATE UNIQUE INDEX uk_range_partitioning_idx ON range_partitioning
+(
+ a,
+ b
+) 
+GLOBAL PARTITION BY HASH 
+(
+ a,
+ b
+);
+
 9. Global Non-Prefixed Indexes
 
 Oracle does not support Global Non Prefixed indexes.
