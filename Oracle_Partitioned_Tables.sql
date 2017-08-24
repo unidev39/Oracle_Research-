@@ -816,7 +816,14 @@ par_2                1
 par_maxvalue         2
 par_3                2
 */
-  
+
+CREATE TABLE all_tab_partition 
+AS 
+SELECT table_owner, table_name, partition_name, to_lob(high_value) high_value, partition_position
+FROM all_tab_partitions WHERE  table_name = Upper('partition_split');
+
+SELECT * FROM all_tab_partition WHERE To_Char(HIGH_VALUE) = 'MAXVALUE';
+
 8. TRUNCATE PARTITION
 
 Use TRUNCATE PARTITION to remove all rows from a partition in a table. Freed space is deallocated or reused depending on whether 
