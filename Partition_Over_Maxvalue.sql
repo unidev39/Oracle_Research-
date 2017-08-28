@@ -182,7 +182,7 @@ AS
      l_sql                  VARCHAR2(32767);
      l_column               VARCHAR2(100);
      l_group_by             VARCHAR2(100) := '';
-     l_having               VARCHAR2(10) := 'AND ';
+     l_operator               VARCHAR2(10) := 'AND ';
      TYPE l_sql_curr        IS REF CURSOR;
      l_curr                 l_sql_curr;
      l_new_partition_value  VARCHAR2(100);
@@ -241,7 +241,7 @@ AS
                                           '||l_table_name_lookup||' a
                                      WHERE 
                                           TRIM(<<Provide The Column for Year>>) = '''||l_year||'''
-                                     '||l_having||' '||l_column||' > '''||l_high_value||'''
+                                     '||l_operator||' '||l_column||' > '''||l_high_value||'''
                                      AND NOT EXISTS (
                                                      SELECT
                                                           1
