@@ -32,7 +32,7 @@ FOPEN_NCHAR    : Open a file FOR multibyte characters
                  it is recommended that the max_linesize be less than 6400.
 FREMOVE        : Delete An Operating System File
 FRENAME        : Rename An Operating System File
-FSEEK          : Adjusts the file pointer forward or backward within the file by the number of bytes specified
+FSEEK          : Adjusts the file pointer forward or backward within the file by the number of bytes specified 
 GETLINE        : Read a Line from a file
 GETLINE_NCHAR  : Read a line from a file containing multi-byte characters
 GET_RAW        : Reads a RAW string value from a file and adjusts the file pointer ahead by the number of bytes read
