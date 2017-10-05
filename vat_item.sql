@@ -13,19 +13,23 @@ AS
   SELECT to_date('11-Sep-17', 'dd-mon-yy') dates, 6  vat, 1 region FROM dual
 )
 SELECT
-     CASE
-        WHEN MOD(rank_val, 2) = 0 THEN ADD_MONTHS(new_dates, 0) + 1
-     ELSE
-        dates
-     END from_dates
+     dates  from_dates
     ,CASE 
         WHEN MOD(rank_val, 2) = 0 THEN CASE
-                                          WHEN (ADD_MONTHS(new_dates, 0) + dates_diff <> new_dates) THEN ADD_MONTHS(new_dates, 0) + dates_diff
+                                          WHEN (ADD_MONTHS(new_dates, 0) + Nvl(dates_diff,0) <> new_dates) THEN ADD_MONTHS(new_dates, 0) + Nvl(dates_diff,0)
                                        ELSE
                                           dates
                                        END
      ELSE
-        dates
+        CASE 
+           WHEN rank_val = 1 THEN dates
+        ELSE
+           CASE
+              WHEN ADD_MONTHS(new_dates, 0) + Nvl(dates_diff,0) <> new_dates THEN ADD_MONTHS(new_dates, 0) + Nvl(dates_diff,0)
+           ELSE
+              dates
+           END   
+        END
      END to_dates
     ,vat
     ,region
