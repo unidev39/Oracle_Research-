@@ -312,6 +312,15 @@ FROM
 where
        table_name = 'EMPLOYEES';
        
+ -- To find the number of columns of ingtrity constants
+SELECT *
+FROM all_cons_columns
+WHERE constraint_name = (
+                         SELECT constraint_name
+                         FROM all_constraints
+                         WHERE table_name = '<<table_name>>'
+                         AND constraint_type = 'P'
+                        );    
 -----------------------------------------------------------------------------
 --Error Ocuring while Object structure created with check constraint
 --Step 1
