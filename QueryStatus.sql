@@ -308,6 +308,8 @@ END;
 explain plan for select * from dual;
 select * from table(dbms_xplan.display);
 
+ALTER USER radm IDENTIFIED BY <<New_Password>> REPLACE <<Old_Password>>;
+
 1. scp /home/oracle/dumps/hr_20120418.dmp oracle@127.1.1.0:/home/oracle/dumps/
 2. scp /home/oracle/dumps/scott_20120418.dmp oracle@127.1.1.0:/home/oracle/dumps/
 
