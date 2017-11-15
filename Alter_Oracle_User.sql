@@ -1,5 +1,5 @@
 -- To repace the old password with new password
-ALTER USER radm IDENTIFIED BY <<New_Password>> REPLACE <<Old_Password>>;
+ALTER USER <<user_name>> IDENTIFIED BY <<New_Password>> REPLACE <<Old_Password>>;
 
 
 -- To reset the user password for all database users (The password is stored in the SYS table "sys.user$" according to policy defined by Oracle.)
@@ -18,7 +18,7 @@ HR 5F6008F9ED270AD6
 ALTER USER HR IDENTIFIED BY <<temp_password>>;
 
 --Step 2: Connect to the HR user with password
-CONNECT <<hr>>/<<hr_temp_password>> 
+CONNECT hr/<<hr_temp_password>> 
 
 SELECT USER FROM dual;
 /*
