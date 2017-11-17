@@ -99,7 +99,7 @@ FROM (
       FROM
            all_objects b
      ) ob
-ON (lo.object_id = ob.object_id)
+ON (lo.object_id = ob.object_id);
 
 SELECT 
      'ALTER SYSTEM KILL SESSION '''||s1.sid||','||s1.serial#||''''|| 'IMMEDIATE;'                                         querytokillsession,
