@@ -67,7 +67,39 @@ FROM (
            dba_objects b
      ) ob
 ON (lo.object_id = ob.object_id);
-AND lo.oracle_username = 'HR';
+--AND lo.oracle_username = 'HR';
+
+-- OR --
+
+SELECT 
+     lo.session_id,
+     lo.oracle_username,
+     lo.os_user_name,
+     ob.owner,
+     ob.object_name,
+     ob.object_type,
+     lo.locked_mode
+FROM (
+      SELECT
+           a.object_id,
+           a.session_id,
+           a.oracle_username,
+           a.os_user_name,
+           a.locked_mode
+      FROM
+           gv$locked_object a
+     ) lo 
+     JOIN
+     (
+      SELECT
+           b.object_id,
+           b.owner,
+           b.object_name,
+           b.object_type
+      FROM
+           all_objects b
+     ) ob
+ON (lo.object_id = ob.object_id)
 
 SELECT 
      'ALTER SYSTEM KILL SESSION '''||s1.sid||','||s1.serial#||''''|| 'IMMEDIATE;'                                         querytokillsession,
@@ -127,7 +159,29 @@ WHERE
                   AND b.parsing_schema_name = USER
                  );
 
--- To find the current query run time 
+-- To find the current query run time
+SELECT 
+     l.opname                             opname,
+     l.target                             target,
+     l.message                            message,
+     ROUND((l.sofar/l.totalwork),4) * 100 Percentage_Complete,
+     l.start_time                         start_time,
+     CEIL(l.time_remaining/60)            Max_Time_Remaining_In_Min,
+     l.time_remaining                     time_remaining_in_second,
+     FLOOR( l.elapsed_seconds / 60 )      Time_Spent_In_Min,
+     ar.sql_fulltext                      sql_fulltext,
+     ar.parsing_schema_name               parsing_schema_name,
+     ar.module                            Client_Tool
+FROM 
+     gv$session_longops l, gv$sqlarea ar
+WHERE 
+     l.sql_id = ar.sql_id
+AND  l.totalwork > 0
+AND  ar.users_executing > 0
+AND  l.sofar != l.totalwork;
+
+-- OR --
+
 SELECT 
      l.opname                             opname,
      l.target                             target,
@@ -149,6 +203,25 @@ AND  ar.users_executing > 0
 AND  l.sofar != l.totalwork;
 
 -- To find Current running query
+SELECT 
+     s.username,
+     s.osuser,
+     s.sid,
+     s.serial#,
+     t.sql_id,
+     t.sql_text
+FROM 
+     gv$sqlarea t, gv$session s
+WHERE 
+     t.address = s.sql_address
+AND  t.hash_value = s.sql_hash_value
+AND  s.status = 'ACTIVE'
+AND  s.username NOT IN ('SYSTEM',USER)
+ORDER BY 
+     s.sid;
+     
+-- OR --
+
 SELECT 
      s.username,
      s.osuser,
