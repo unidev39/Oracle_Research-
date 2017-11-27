@@ -1075,3 +1075,39 @@ END sp_word_arrange;
 
 
 EXEC sp_word_arrange('tbl_word','lvl1id');
+
+WITH DATA
+AS
+(
+ SELECT 'BKBJJK_JNUJNKJ_001' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_009' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_022' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_099' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_111' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_999' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_P001' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_P009' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_P022' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_P099' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_P011' COL FROM DUAL UNION ALL
+ SELECT 'BKBJJK_JNUJNKJ_P999' COL FROM DUAL
+)
+SELECT regexp_replace(COL,'[0-9]'),Length(To_Number(REGEXP_SUBSTR(COL,'[0-9]+'))),To_Number(REGEXP_SUBSTR(COL,'[0-9]+'))+1,
+       CASE 
+          WHEN Length(To_Number(REGEXP_SUBSTR(COL,'[0-9]+'))) = 1 
+          THEN CASE 
+                  WHEN Length(TO_NUMBER(REGEXP_SUBSTR(COL,'[0-9]+'))+1) = 1 
+                  THEN regexp_replace(COL,'[0-9]')||'00'||To_Char(TO_NUMBER(REGEXP_SUBSTR(COL,'[0-9]+'))+1)
+                  ELSE regexp_replace(COL,'[0-9]')||'0'||To_Char(TO_NUMBER(REGEXP_SUBSTR(COL,'[0-9]+'))+1) END
+          WHEN Length(To_Number(REGEXP_SUBSTR(COL,'[0-9]+'))) = 2 
+          THEN CASE 
+                  WHEN Length(TO_NUMBER(REGEXP_SUBSTR(COL,'[0-9]+'))+1) = 2 
+                  THEN regexp_replace(COL,'[0-9]')||'0'||To_Char(TO_NUMBER(REGEXP_SUBSTR(COL,'[0-9]+'))+1)
+                  ELSE regexp_replace(COL,'[0-9]')||To_Char(TO_NUMBER(REGEXP_SUBSTR(COL,'[0-9]+'))+1) END
+          WHEN Length(To_Number(REGEXP_SUBSTR(COL,'[0-9]+'))) = 3 
+          THEN CASE 
+                  WHEN Length(TO_NUMBER(REGEXP_SUBSTR(COL,'[0-9]+'))+1) = 3 
+                  THEN regexp_replace(COL,'[0-9]')||To_Char(TO_NUMBER(REGEXP_SUBSTR(COL,'[0-9]+'))+1) 
+                  ELSE regexp_replace(COL,'[0-9]')||'0'||To_Char(TO_NUMBER(REGEXP_SUBSTR(COL,'[0-9]+'))+1) END
+          END COL
+FROM DATA;
