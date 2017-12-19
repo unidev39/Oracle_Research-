@@ -240,7 +240,26 @@ AND  s.username NOT IN ('SYSTEM',USER)
 ORDER BY 
      s.sid,
      t.piece;
-
+-- OR --
+SELECT
+     'exec kill_my_session('''||s.sid||''', '''||s.serial#||''', '''||s.inst_id||''') ;' kill_my_session,
+     s.inst_id,
+     s.username,
+     s.osuser,
+     s.sid,
+     s.serial#,
+     t.sql_id,     
+     t.sql_text
+FROM 
+     gv$sqlarea t, gv$session s
+WHERE 
+     t.address = s.sql_address
+AND  t.hash_value = s.sql_hash_value
+AND  s.status = 'ACTIVE'
+AND  s.username IN ('DSHRIVASTAV') 
+--AND t.sql_text NOT LIKE 'SELECT%'
+ORDER BY 
+     s.sid;
 -- To find the degree of table
 SELECT 
      a.table_name, 
