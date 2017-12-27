@@ -479,7 +479,7 @@ Assuming the range_partitioning table is range partitioned on range_date, the fo
 Assuming the range_partitioning table is range partitioned on range_date, the followning are examples of local Non-Prefixed Index. 
 The indexed column does not match the partition key.
 
-6.7.
+6.1.
 CREATE TABLE partitioned_test_table
 ( 
   a    INT,
@@ -709,20 +709,23 @@ tablespace as the corresponding newly created partitions of the underlying table
 If you do not specify physical attributes (PCTFREE, PCTUSED, INITRANS, MAXTRANS, STORAGE) for the new partitions, the current values of 
 the partition being split are used as the default values for both partitions.
 
-If partition_name is not empty, SPLIT PARTITION marks all affected index partitions as unusable. This includes all global index partitions 
-as well as the local index partitions which result from the split.
-
 The PARALLEL clause on SPLIT PARTITION does not change the default PARALLEL attributes of table.
 
 The following example splits the old partition STATION5 creating a new partition for STATION9:
 
-ALTER TABLE trains
-  SPLIT PARTITION STATION5 AT ( '50-001' )
-  INTO ( PARTITION station5 TABLESPACE train009 (MINEXTENTS 2),
-         PARTITION station9 TABLESPACE train010 )
-  PARALLEL ( DEGREE 9 );
-  
+ALTER TABLE trains SPLIT PARTITION STATION5 AT ('50-001')
+INTO
+(
+ PARTITION station5 TABLESPACE train009 (MINEXTENTS 2),
+ PARTITION station9 TABLESPACE train010
+)
+PARALLEL ( DEGREE 9 );
+
+-- Example --
+-- To drop permanently from database (If the object exists)—
 DROP TABLE partition_split PURGE;
+
+-- Create object based on the range over maxvalue --
 CREATE TABLE partition_split 
 ( 
   col_pk_key VARCHAR2(20) NOT NULL, 
@@ -735,31 +738,39 @@ PARTITION BY RANGE (col_pk_id)
  PARTITION par_maxvalue VALUES LESS THAN (MAXVALUE)
 );
 
-TRUNCATE TABLE partition_split;
+-- Insert record for partition par_1 --
 INSERT INTO partition_split (col_pk_key,col_pk_id) VALUES('par_1',0);
 SELECT * FROM partition_split PARTITION (par_1);
+-- Output for partition par_1 --
 /*
 COL_PK_KEY COL_PK_ID
 ---------- ---------
 par_1              0
 */
 
+-- Insert record for partition par_2 --
 INSERT INTO partition_split (col_pk_key,col_pk_id) VALUES('par_2',1);
 SELECT * FROM partition_split PARTITION (par_2);
+-- Output for partition par_2 --
 /*
 COL_PK_KEY COL_PK_ID
 ---------- ---------
 par_2              1
 */
+
+-- Insert record for partition par_maxvalue --
 INSERT INTO partition_split (col_pk_key,col_pk_id) VALUES('par_maxvalue',2);
 SELECT * FROM partition_split PARTITION (par_maxvalue);
+-- Output for partition par_maxvalue --
 /*
 COL_PK_KEY   COL_PK_ID
 ------------ ---------
 par_maxvalue         2
 */
+-- To complete the transection --
 COMMIT;
 
+-- Output for all partitions --
 SELECT * FROM partition_split;
 /*
 COL_PK_KEY   COL_PK_ID
@@ -769,6 +780,7 @@ par_2                1
 par_maxvalue         2
 */
 
+-- To split the partition over max values par_maxvalue and named as par_3 --
 ALTER TABLE partition_split SPLIT PARTITION par_maxvalue AT (3) 
 INTO 
 (
@@ -776,6 +788,7 @@ INTO
  PARTITION par_maxvalue
 ); 
 
+-- Current object structure looks like --
 /*
 CREATE TABLE partition_split 
 ( 
@@ -791,22 +804,25 @@ PARTITION BY RANGE (col_pk_id)
 );
 */
 
+-- Insert record for partition par_3 --
 INSERT INTO partition_split (col_pk_key,col_pk_id) VALUES('par_3',2);
 SELECT * FROM partition_split PARTITION (par_maxvalue);
+-- Output for partition par_maxvalue, the data has been moved from par_maxvalue to par_3 --
 /*
 COL_PK_KEY COL_PK_ID
 ---------- ---------
 */
 
+-- Output for partition par_3 --
 SELECT * FROM partition_split PARTITION (par_3);
 /*
 COL_PK_KEY   COL_PK_ID
 ------------ ---------
 par_maxvalue         2
 par_3                2
-
 */
 
+-- Output for all partitions --
 SELECT * FROM partition_split;
 /*
 COL_PK_KEY   COL_PK_ID
@@ -819,8 +835,15 @@ par_3                2
 
 CREATE TABLE all_tab_partition 
 AS 
-SELECT table_owner, table_name, partition_name, to_lob(high_value) high_value, partition_position
-FROM all_tab_partitions WHERE  table_name = Upper('partition_split');
+SELECT 
+     table_owner,
+     table_name,
+     partition_name,
+     to_lob(high_value) high_value,
+     partition_position
+FROM 
+     all_tab_partitions 
+WHERE table_name = Upper('partition_split');
 
 SELECT * FROM all_tab_partition WHERE To_Char(HIGH_VALUE) = 'MAXVALUE';
 
