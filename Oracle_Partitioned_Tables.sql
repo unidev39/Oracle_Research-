@@ -847,6 +847,212 @@ WHERE table_name = Upper('partition_split');
 
 SELECT * FROM all_tab_partition WHERE To_Char(HIGH_VALUE) = 'MAXVALUE';
 
+-- Also worked for sub-partitions
+DROP TABLE table_subpartitions PURGE;
+CREATE TABLE table_subpartitions
+(
+ col_1      NUMBER(10),
+ col_2      NUMBER(15),
+ col_3      VARCHAR2(50)
+)
+PARTITION BY RANGE (col_2) 
+SUBPARTITION BY HASH (col_1) 
+SUBPARTITIONS 4
+(
+  PARTITION table_subpartitions_p001  VALUES LESS THAN (5), 
+  PARTITION table_subpartitions_p002  VALUES LESS THAN (9), 
+  PARTITION table_subpartitions_pmax  VALUES LESS THAN (MAXVALUE)
+);
+
+SELECT * FROM all_tab_partitions WHERE table_name ='TABLE_SUBPARTITIONS';
+/*
+TABLE_OWNER TABLE_NAME          COMPOSITE PARTITION_NAME           SUBPARTITION_COUNT HIGH_VALUE HIGH_VALUE_LENGTH PARTITION_POSITION TABLESPACE_NAME PCT_FREE PCT_USED INI_TRANS MAX_TRANS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT MAX_SIZE PCT_INCREASE FREELISTS FREELIST_GROUPS LOGGING COMPRESSION COMPRESS_FOR NUM_ROWS BLOCKS EMPTY_BLOCKS AVG_SPACE CHAIN_CNT AVG_ROW_LEN SAMPLE_SIZE LAST_ANALYZED BUFFER_POOL FLASH_CACHE CELL_FLASH_CACHE GLOBAL_STATS USER_STATS IS_NESTED PARENT_TABLE_PARTITION INTERVAL SEGMENT_CREATED
+RADM        TABLE_SUBPARTITIONS YES       TABLE_SUBPARTITIONS_P001                  4 5                          1                  1 RETAIL_DATA           10                  1       255                                                                                                  NONE    NONE                                                                                                            DEFAULT     DEFAULT     DEFAULT          NO           NO         N/A       N/A                    NO       NONE           
+RADM        TABLE_SUBPARTITIONS YES       TABLE_SUBPARTITIONS_P002                  4 9                          1                  2 RETAIL_DATA           10                  1       255                                                                                                  NONE    NONE                                                                                                            DEFAULT     DEFAULT     DEFAULT          NO           NO         N/A       N/A                    NO       NONE           
+RADM        TABLE_SUBPARTITIONS YES       TABLE_SUBPARTITIONS_PMAX                  4 MAXVALUE                   8                  3 RETAIL_DATA           10                  1       255                                                                                                  NONE    NONE                                                                                                            DEFAULT     DEFAULT     DEFAULT          NO           NO         N/A       N/A                    NO       NONE           
+*/
+
+SELECT * FROM all_tab_subpartitions WHERE table_name ='TABLE_SUBPARTITIONS';
+/*
+TABLE_OWNER TABLE_NAME          PARTITION_NAME           SUBPARTITION_NAME HIGH_VALUE HIGH_VALUE_LENGTH SUBPARTITION_POSITION TABLESPACE_NAME PCT_FREE PCT_USED INI_TRANS MAX_TRANS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT MAX_SIZE PCT_INCREASE FREELISTS FREELIST_GROUPS LOGGING COMPRESSION COMPRESS_FOR NUM_ROWS BLOCKS EMPTY_BLOCKS AVG_SPACE CHAIN_CNT AVG_ROW_LEN SAMPLE_SIZE LAST_ANALYZED BUFFER_POOL FLASH_CACHE CELL_FLASH_CACHE GLOBAL_STATS USER_STATS INTERVAL SEGMENT_CREATED
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P001 SYS_SUBP4657                                 0                     1 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P001 SYS_SUBP4658                                 0                     2 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P001 SYS_SUBP4659                                 0                     3 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P001 SYS_SUBP4660                                 0                     4 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P002 SYS_SUBP4661                                 0                     1 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P002 SYS_SUBP4662                                 0                     2 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P002 SYS_SUBP4663                                 0                     3 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P002 SYS_SUBP4664                                 0                     4 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_PMAX SYS_SUBP4665                                 0                     1 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_PMAX SYS_SUBP4666                                 0                     2 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_PMAX SYS_SUBP4667                                 0                     3 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_PMAX SYS_SUBP4668                                 0                     4 RETAIL_DATA           10                  1       255                                                                                                  YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+*/
+
+INSERT INTO table_subpartitions (col_1,col_2,col_3) VALUES(1,1,'table_subpartitions_p001');
+SELECT * FROM table_subpartitions PARTITION (table_subpartitions_p001);
+/*
+COL_1 COL_2 COL_3
+----- ----- ------------------------                   
+    1     1 table_subpartitions_p001
+*/
+
+SELECT * FROM table_subpartitions  SUBPARTITION (SYS_SUBP4660) ;
+/*
+COL_1 COL_2 COL_3
+----- ----- ------------------------                   
+    1     1 table_subpartitions_p001
+*/
+
+COMMIT;
+
+INSERT INTO table_subpartitions (col_1,col_2,col_3) VALUES(10,10,'table_subpartitions_pmax');
+SELECT * FROM table_subpartitions PARTITION (table_subpartitions_pmax);
+/*
+COL_1 COL_2 COL_3
+----- ----- ------------------------                   
+   10    10 table_subpartitions_pmax
+*/
+
+SELECT * FROM table_subpartitions  SUBPARTITION (SYS_SUBP4666) ;
+/*
+COL_1 COL_2 COL_3
+----- ----- ------------------------                   
+   10    10 table_subpartitions_pmax
+*/
+
+INSERT INTO table_subpartitions (col_1,col_2,col_3) VALUES(10,10,'table_subpartitions_pmax');
+SELECT * FROM table_subpartitions PARTITION (table_subpartitions_pmax);
+/*
+COL_1 COL_2 COL_3
+----- ----- ------------------------                   
+   10    10 table_subpartitions_pmax
+   10    10 table_subpartitions_pmax
+*/
+
+SELECT * FROM table_subpartitions  SUBPARTITION (SYS_SUBP4650) ;
+/*
+COL_1 COL_2 COL_3
+----- ----- ------------------------                   
+   10    10 table_subpartitions_pmax
+   10    10 table_subpartitions_pmax
+*/
+
+COMMIT;
+
+ALTER TABLE table_subpartitions SPLIT PARTITION table_subpartitions_pmax AT (13) 
+INTO 
+(
+ PARTITION table_subpartitions_p003, 
+ PARTITION table_subpartitions_pmax
+); 
+
+/*
+CREATE TABLE table_subpartitions
+(
+  col_1 NUMBER(10,0),
+  col_2 NUMBER(15,0),
+  col_3 VARCHAR2(50)
+)
+PARTITION BY RANGE (col_2)
+  (
+    PARTITION table_subpartitions_p001 VALUES LESS THAN (5)
+    (
+     SUBPARTITION sys_subp4657,
+     SUBPARTITION sys_subp4658,
+     SUBPARTITION sys_subp4659,
+     SUBPARTITION sys_subp4660
+    ),
+    PARTITION table_subpartitions_p002 VALUES LESS THAN (9),
+    (
+     SUBPARTITION sys_subp4661,
+     SUBPARTITION sys_subp4662,
+     SUBPARTITION sys_subp4663,
+     SUBPARTITION sys_subp4664
+    ),
+    PARTITION table_subpartitions_p003 VALUES LESS THAN (13)
+    (
+	   SUBPARTITION sys_subp4669,
+     SUBPARTITION sys_subp4670,
+     SUBPARTITION sys_subp4671,
+     SUBPARTITION sys_subp4672
+    ),
+    PARTITION table_subpartitions_pmax VALUES LESS THAN (MAXVALUE)
+    (
+     SUBPARTITION sys_subp4665,
+     SUBPARTITION sys_subp4666,
+     SUBPARTITION sys_subp4667,
+     SUBPARTITION sys_subp4668
+    )
+);
+*/
+
+SELECT * FROM all_tab_partitions WHERE table_name ='TABLE_SUBPARTITIONS';
+/*
+TABLE_OWNER TABLE_NAME          COMPOSITE PARTITION_NAME           SUBPARTITION_COUNT HIGH_VALUE HIGH_VALUE_LENGTH PARTITION_POSITION TABLESPACE_NAME PCT_FREE PCT_USED INI_TRANS MAX_TRANS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT MAX_SIZE PCT_INCREASE FREELISTS FREELIST_GROUPS LOGGING COMPRESSION COMPRESS_FOR NUM_ROWS BLOCKS EMPTY_BLOCKS AVG_SPACE CHAIN_CNT AVG_ROW_LEN SAMPLE_SIZE LAST_ANALYZED BUFFER_POOL FLASH_CACHE CELL_FLASH_CACHE GLOBAL_STATS USER_STATS IS_NESTED PARENT_TABLE_PARTITION INTERVAL SEGMENT_CREATED
+RADM        TABLE_SUBPARTITIONS YES       TABLE_SUBPARTITIONS_P001                  4 5                          1                  1 RETAIL_DATA           10                  1       255                                                                                                  NONE    NONE                                                                                                            DEFAULT     DEFAULT     DEFAULT          NO           NO         N/A       N/A                    NO       NONE           
+RADM        TABLE_SUBPARTITIONS YES       TABLE_SUBPARTITIONS_P002                  4 9                          1                  2 RETAIL_DATA           10                  1       255                                                                                                  NONE    NONE                                                                                                            DEFAULT     DEFAULT     DEFAULT          NO           NO         N/A       N/A                    NO       NONE           
+RADM        TABLE_SUBPARTITIONS YES       TABLE_SUBPARTITIONS_P003                  4 13                         2                  3 RETAIL_DATA           10                  1       255                                                                                                  NONE    NONE                                                                                                            DEFAULT     DEFAULT     DEFAULT          NO           NO         N/A       N/A                    NO       NONE           
+RADM        TABLE_SUBPARTITIONS YES       TABLE_SUBPARTITIONS_PMAX                  4 MAXVALUE                   8                  4 RETAIL_DATA           10                  1       255                                                                                                  NONE    NONE                                                                                                            DEFAULT     DEFAULT     DEFAULT          NO           NO         N/A       N/A                    NO       NONE           
+*/
+
+SELECT * FROM all_tab_subpartitions WHERE table_name ='TABLE_SUBPARTITIONS';
+/*
+TABLE_OWNER TABLE_NAME          PARTITION_NAME           SUBPARTITION_NAME HIGH_VALUE HIGH_VALUE_LENGTH SUBPARTITION_POSITION TABLESPACE_NAME PCT_FREE PCT_USED INI_TRANS MAX_TRANS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT   MAX_SIZE PCT_INCREASE FREELISTS FREELIST_GROUPS LOGGING COMPRESSION COMPRESS_FOR NUM_ROWS BLOCKS EMPTY_BLOCKS AVG_SPACE CHAIN_CNT AVG_ROW_LEN SAMPLE_SIZE LAST_ANALYZED BUFFER_POOL FLASH_CACHE CELL_FLASH_CACHE GLOBAL_STATS USER_STATS INTERVAL SEGMENT_CREATED
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P001 SYS_SUBP4657                                 0                     1 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P001 SYS_SUBP4658                                 0                     2 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P001 SYS_SUBP4659                                 0                     3 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P001 SYS_SUBP4660                                 0                     4 RETAIL_DATA           10                  1       255        8388608     1048576          1 2147483645 2147483645                                        YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       YES            
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P002 SYS_SUBP4661                                 0                     1 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P002 SYS_SUBP4662                                 0                     2 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P002 SYS_SUBP4663                                 0                     3 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P002 SYS_SUBP4664                                 0                     4 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P003 SYS_SUBP4669                                 0                     1 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P003 SYS_SUBP4670                                 0                     2 RETAIL_DATA           10                  1       255        8388608     1048576          1 2147483645 2147483645                                        YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       YES            
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P003 SYS_SUBP4671                                 0                     3 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_P003 SYS_SUBP4672                                 0                     4 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_PMAX SYS_SUBP4665                                 0                     1 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_PMAX SYS_SUBP4666                                 0                     2 RETAIL_DATA           10                  1       255        8388608     1048576          1 2147483645 2147483645                                        YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       YES            
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_PMAX SYS_SUBP4667                                 0                     3 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+RADM        TABLE_SUBPARTITIONS TABLE_SUBPARTITIONS_PMAX SYS_SUBP4668                                 0                     4 RETAIL_DATA           10                  1       255                                                                                                    YES     DISABLED                                                                                                        DEFAULT     DEFAULT     DEFAULT          NO           NO         NO       NO             
+*/
+
+INSERT INTO table_subpartitions (col_1,col_2,col_3) VALUES(10,10,'table_subpartitions_p003');
+SELECT * FROM table_subpartitions PARTITION (table_subpartitions_p003);
+/*
+COL_1 COL_2 COL_3                   
+----- ----- ------------------------
+   10    10 table_subpartitions_pmax
+   10    10 table_subpartitions_pmax
+   10    10 table_subpartitions_p003
+*/
+
+SELECT * FROM table_subpartitions  SUBPARTITION (SYS_SUBP4670) ;
+/*
+COL_1 COL_2 COL_3
+----- ----- ------------------------                   
+   10    10 table_subpartitions_pmax
+   10    10 table_subpartitions_pmax
+   10    10 table_subpartitions_p003
+*/
+
+COMMIT;
+
+INSERT INTO table_subpartitions (col_1,col_2,col_3) VALUES(14,14,'table_subpartitions_pmax');
+SELECT * FROM table_subpartitions PARTITION (table_subpartitions_pmax);
+/*
+COL_1 COL_2 COL_3
+----- ----- ------------------------                   
+   14    14 table_subpartitions_pmax
+*/
+
+SELECT * FROM table_subpartitions  SUBPARTITION (SYS_SUBP4668) ;
+/*
+COL_1 COL_2 COL_3
+----- ----- ------------------------                   
+   14    14 table_subpartitions_pmax
+*/
+
 8. TRUNCATE PARTITION
 
 Use TRUNCATE PARTITION to remove all rows from a partition in a table. Freed space is deallocated or reused depending on whether 
