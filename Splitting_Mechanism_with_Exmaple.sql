@@ -263,7 +263,7 @@ BEGIN
        EXIT WHEN keylevel_cur%notfound;
        l_keylevel:='';
        
-       -- Splitting records for 100 value --
+       -- Splitting records for 10 value --
        l_thresholdtosplit := 10;
        EXECUTE IMMEDIATE 'SELECT COUNT(DISTINCT NVL(nlvlid,0)) FROM '||p_tablename||' WHERE reportid = '||p_repid||' AND keylevel IN ('||l_nkeylevel||')' INTO l_nlvlidcount;
 
