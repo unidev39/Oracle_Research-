@@ -43,6 +43,8 @@ CREATE TABLE employees_bk AS SELECT * FROM employees WHERE ROWNUM < 1;
 CREATE TABLE employees_bk AS SELECT * FROM employees WHERE 1=2;
 -- Using compressed data
 CREATE TABLE employees_bk COMPRESS AS SELECT * FROM HR.employees;
+-- Using compressed nologing parallel
+CREATE TABLE employees_bk PARALLEL COMPRESS NOLOGGING TABLESPACE users AS SELECT * FROM hr.employees;
 
 -- Table column data type change and create structure as per as client required 
 CREATE TABLE client_request
@@ -53,6 +55,60 @@ CREATE TABLE client_request
 )
 AS
 SELECT 1111111 col_1, 'aaaaaaa' col_2, sysdate col_3 FROM dual;
+
+-- Virtual Columns in Oracle Database 11g Release 1
+/*
+When queried, virtual columns appear to be normal table columns, but their values are derived rather than being stored on disc. 
+The syntax for defining a virtual column is listed below.
+
+column_name [datatype] [GENERATED ALWAYS] AS (expression) [VIRTUAL]
+If the datatype is omitted, it is determined based on the result of the expression. The GENERATED ALWAYS and VIRTUAL keywords 
+are provided for clarity only.
+
+The script below creates and populates an virtula_table table with two levels of commission. It includes two virtual columns 
+to display the commission-based salary. The first uses the most abbreviated syntax while the second uses the most verbose form.
+*/
+
+CREATE TABLE virtula_table
+(
+  id          NUMBER,
+  first_name  VARCHAR2(10),
+  last_name   VARCHAR2(10),
+  salary      NUMBER(9,2),
+  comm1       NUMBER(3),
+  comm2       NUMBER(3),
+  salary1     AS (ROUND(salary*(1+comm1/100),2)),
+  salary2     NUMBER GENERATED ALWAYS AS (ROUND(salary*(1+comm2/100),2)) VIRTUAL,
+  CONSTRAINT virtula_table_pk PRIMARY KEY (id)
+);
+
+INSERT INTO virtula_table
+(
+ id, first_name, last_name, salary, comm1, comm2
+)
+VALUES
+(
+ 1, 'JOHN', 'DOE', 100, 5, 10
+);
+
+INSERT INTO virtula_table
+(
+ id, first_name, last_name, salary, comm1, comm2
+)
+VALUES
+(
+ 2, 'JAYNE', 'DOE', 200, 10, 20
+);
+COMMIT;
+
+SELECT * FROM virtula_table;
+/*
+ID FIRST_NAME LAST_NAME SALARY COMM1 COMM2 SALARY1 SALARY2
+-- ---------- --------- ------ ----- ----- ------- -------
+ 1 JOHN       DOE          100     5    10     105     110
+ 2 JAYNE      DOE          200    10    20     220     240
+*/
+
 
 -- External Table 
 -- Create a Directories where we place the *.* files that are needed to load in oracle table
