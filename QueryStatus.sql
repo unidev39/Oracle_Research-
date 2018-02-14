@@ -260,6 +260,21 @@ AND  s.username IN ('DSHRIVASTAV')
 --AND t.sql_text NOT LIKE 'SELECT%'
 ORDER BY 
      s.sid;
+
+-- To find the blocking session
+SELECT
+     blocking_session
+    ,sid
+    ,serial#
+    ,wait_class
+    ,seconds_in_wait
+FROM
+    gv$session
+WHERE
+    blocking_session IS NOT NULL
+ORDER BY
+    blocking_session;
+    
 -- To find the degree of table
 SELECT 
      a.table_name, 
