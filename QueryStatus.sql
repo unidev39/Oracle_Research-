@@ -243,21 +243,45 @@ ORDER BY
 -- OR --
 SELECT
      'exec kill_my_session('''||s.sid||''', '''||s.serial#||''', '''||s.inst_id||''') ;' kill_my_session,
-     s.inst_id,
+     s.status,
      s.username,
      s.osuser,
+     s.inst_id,
      s.sid,
      s.serial#,
-     t.sql_id,     
+     t.sql_id,
      t.sql_text
 FROM 
      gv$sqlarea t, gv$session s
 WHERE 
      t.address = s.sql_address
 AND  t.hash_value = s.sql_hash_value
-AND  s.status = 'ACTIVE'
+AND  s.status IN ('ACTIVE','INACTIVE')
 AND  s.username IN ('DSHRIVASTAV') 
 --AND t.sql_text NOT LIKE 'SELECT%'
+ORDER BY 
+     s.sid;
+
+-- To find Current running sessions Used by Reprot's
+SELECT
+     --'exec kill_my_session('''||s.sid||''', '''||s.serial#||''', '''||s.inst_id||''') ;' kill_my_session,
+     s.status,
+     s.username,
+     s.osuser,
+     s.inst_id,
+     s.sid,
+     s.serial#,
+     t.sql_id,
+     t.sql_text
+FROM 
+     gv$sql t ,gv$session s
+WHERE 
+     t.inst_id = s.inst_id
+AND t.hash_value = s.sql_hash_value
+AND s.status IN ('ACTIVE','INACTIVE')
+AND s.username NOT IN ('SYSTEM','DSHRIVASTAV')
+--AND (s.osuser = 'obiadmin' OR s.username = 'RA13FE')
+AND (lower(s.osuser) = 'obiadmin' OR upper(s.username) = 'RA13FE')
 ORDER BY 
      s.sid;
 
