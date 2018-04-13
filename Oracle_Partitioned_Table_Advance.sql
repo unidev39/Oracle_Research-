@@ -183,6 +183,163 @@ SUPPLIER_ID PARTNUM PRICE
          10     100  1000
 */
 
+Creating range-partitioned (Interval-Partitioned) Tables.
+
+The INTERVAL clause of the CREATE TABLE statement establishes interval partitioning for the table.
+You must specify at least one range partition using the PARTITION clause. The range partitioning
+key value determines the high value of the range partitions, which is called the transition point,
+and the database automatically creates interval partitions for data beyond that transition point.
+The lower boundary of every interval partition is the non-inclusive upper boundary of the previous 
+range or interval partition.
+
+For example, if you create an interval partitioned table with monthly intervals and the transition point 
+at January 1, 2010, then the lower boundary for the January 2010 interval is January 1, 2010. The lower boundary
+for the July 2010 interval is July 1, 2010, regardless of whether the June 2010 partition was previously created.
+Note, however, that using a date where the high or low bound of the partition would be out of the range set for
+storage causes an error. For example, TO_DATE('9999-12-01', 'YYYY-MM-DD') causes the high bound to be 10000-01-01,
+which would not be storable if 10000 is out of the legal range.
+
+For interval partitioning, the partitioning key can only be a single column name from the table and it must be of
+NUMBER or DATE type. The optional STORE IN clause lets you specify one or more tablespaces into which the database
+stores interval partition data using a round-robin algorithm for subsequently created interval partitions.
+The following example specifies four partitions with varying widths. It also specifies that above the transition
+point of January 1, 2010, partitions are created with a width of one month. The high bound of partition p3 represents
+the transition point. p3 and all partitions below it (p0, p1, and p2 in this example) are in the range section while
+all partitions above it fall into the interval section.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE interval_sales_partition PURGE;
+
+-- To Create a range-partitioned table with (Interval-Partitioned)
+CREATE TABLE interval_sales_partition
+(
+ prod_id        NUMBER(6),
+ cust_id        NUMBER,
+ time_id        DATE,
+ channel_id     CHAR(1),
+ promo_id       NUMBER(6),
+ quantity_sold  NUMBER(3),
+ amount_sold    NUMBER(10,2)
+)
+PARTITION BY RANGE (time_id) 
+INTERVAL(NUMTOYMINTERVAL(1,'MONTH'))
+(
+ PARTITION p0 VALUES LESS THAN (TO_DATE('1-1-2007', 'DD-MM-YYYY')),
+ PARTITION p1 VALUES LESS THAN (TO_DATE('1-1-2008', 'DD-MM-YYYY')),
+ PARTITION p2 VALUES LESS THAN (TO_DATE('1-7-2009', 'DD-MM-YYYY')),
+ PARTITION p3 VALUES LESS THAN (TO_DATE('1-1-2010', 'DD-MM-YYYY')) 
+);
+
+-- To show the object structure
+SELECT
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'INTERVAL_SALES_PARTITION';
+/*
+TABLE_NAME               PARTITION_NAME HIGH_VALUE                                                                          PARTITION_POSITION NUM_ROWS
+------------------------ -------------- ----------------------------------------------------------------------------------- ------------------ ---------
+INTERVAL_SALES_PARTITION P0             TO_DATE(' 2007-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  1         
+INTERVAL_SALES_PARTITION P1             TO_DATE(' 2008-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  2         
+INTERVAL_SALES_PARTITION P2             TO_DATE(' 2009-07-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  3         
+INTERVAL_SALES_PARTITION P3             TO_DATE(' 2010-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  4         
+*/
+
+-- To insert the data into object
+INSERT INTO interval_sales_partition VALUES (1,1,TO_DATE('1-1-2009', 'DD-MM-YYYY'),'A',1,1,1);
+COMMIT;
+
+-- To show the object data
+SELECT * FROM interval_sales_partition PARTITION(p2);
+/*
+PROD_ID CUST_ID TIME_ID             CHANNEL_ID PROMO_ID QUANTITY_SOLD AMOUNT_SOLD
+------- ------- ------------------- ---------- -------- ------------- -----------
+      1       1 01.01.2009 00:00:00 A                 1             1           1
+*/
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'INTERVAL_SALES_PARTITION', 
+     estimate_percent => 10,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure
+SELECT
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'INTERVAL_SALES_PARTITION';
+
+/*
+TABLE_NAME               PARTITION_NAME HIGH_VALUE                                                                          PARTITION_POSITION NUM_ROWS
+------------------------ -------------- ----------------------------------------------------------------------------------- ------------------ ---------
+INTERVAL_SALES_PARTITION P0             TO_DATE(' 2007-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  1        0
+INTERVAL_SALES_PARTITION P1             TO_DATE(' 2008-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  2        0
+INTERVAL_SALES_PARTITION P2             TO_DATE(' 2009-07-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  3        1
+INTERVAL_SALES_PARTITION P3             TO_DATE(' 2010-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  4        0
+*/
+
+-- To insert the data into object
+INSERT INTO interval_sales_partition VALUES (1,1,TO_DATE('30-12-2030', 'DD-MM-YYYY'),'A',1,1,1);
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'INTERVAL_SALES_PARTITION', 
+     estimate_percent => 10,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure
+SELECT
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'INTERVAL_SALES_PARTITION';
+/*
+TABLE_NAME               PARTITION_NAME HIGH_VALUE                                                                          PARTITION_POSITION NUM_ROWS
+------------------------ -------------- ----------------------------------------------------------------------------------- ------------------ ---------
+INTERVAL_SALES_PARTITION P0             TO_DATE(' 2007-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  1        0
+INTERVAL_SALES_PARTITION P1             TO_DATE(' 2008-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  2        0
+INTERVAL_SALES_PARTITION P2             TO_DATE(' 2009-07-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  3        1
+INTERVAL_SALES_PARTITION P3             TO_DATE(' 2010-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  4        0
+INTERVAL_SALES_PARTITION SYS_P97763     TO_DATE(' 2031-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  5        1
+*/
+
+-- To show the object data
+SELECT * FROM interval_sales_partition PARTITION(SYS_P97763);
+/*
+PROD_ID CUST_ID TIME_ID             CHANNEL_ID PROMO_ID QUANTITY_SOLD AMOUNT_SOLD
+------- ------- ------------------- ---------- -------- ------------- -----------
+      1       1 30.12.2030 00:00:00 A                 1             1           1
+*/
 
 Using Virtual Column-Based Partitioning
 
