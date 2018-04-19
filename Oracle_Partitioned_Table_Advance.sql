@@ -183,6 +183,171 @@ SUPPLIER_ID PARTNUM PRICE
          10     100  1000
 */
 
+Creating a range-partitioned table with ENABLE ROW MOVEMENT
+
+In the following example, more complexity is added to the example presented earlier for a range-partitioned table.
+Storage parameters and a LOGGING attribute are specified at the table level. These replace the corresponding defaults
+inherited from the table space level for the table itself, and are inherited by the range partitions.
+However, because there was little business in the first quarter, the storage attributes for partition sales_q1_2006 
+are made smaller. The ENABLE ROW MOVEMENT clause is specified to allow the automatic migration of a row to a new 
+storage for that partition if an update to a key value is made that would place the with new row in a storage.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE sales_enable_row_movement PURGE;
+
+-- To Create a range-partitioned table with enable row movement
+CREATE TABLE sales_enable_row_movement
+(
+ prod_id        NUMBER,
+ cust_id        NUMBER,
+ time_id        DATE,
+ channel_id     CHAR(1),
+ promo_id       NUMBER
+)
+STORAGE (INITIAL 100K NEXT 50K) LOGGING
+PARTITION BY RANGE (time_id)
+(
+ PARTITION sales_q1_2006 VALUES LESS THAN (TO_DATE('01-JAN-2018','DD-MON-YYYY'))
+ TABLESPACE table_backup STORAGE (INITIAL 20K NEXT 10K),
+ PARTITION sales_q2_2006 VALUES LESS THAN (TO_DATE('01-FEB-2018','DD-MON-YYYY'))
+ TABLESPACE table_backup,
+ PARTITION sales_q3_2006 VALUES LESS THAN (TO_DATE('01-MAR-2018','DD-MON-YYYY'))
+ TABLESPACE table_backup,
+ PARTITION sales_q4_2006 VALUES LESS THAN (TO_DATE('01-APR-2018','DD-MON-YYYY'))
+ TABLESPACE table_backup
+)
+ENABLE ROW MOVEMENT
+;
+
+-- To show the object structure
+SELECT
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows,
+     initial_extent,
+     next_extent,
+     min_extent,
+     max_extent,
+     max_size
+FROM 
+     all_tab_partitions
+WHERE table_name = 'SALES_ENABLE_ROW_MOVEMENT';
+
+/*
+TABLE_NAME                PARTITION_NAME HIGH_VALUE                           PARTITION_POSITION NUM_ROWS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT MAX_SIZE
+------------------------- -------------- ------------------------------------ ------------------ -------- -------------- ----------- ---------- ---------- --------
+SALES_ENABLE_ROW_MOVEMENT SALES_Q1_2006  TO_DATE(' 2018-01-01', 'SYYYY-MM-DD')                  1                   24576       16384                               
+SALES_ENABLE_ROW_MOVEMENT SALES_Q2_2006  TO_DATE(' 2018-02-01', 'SYYYY-MM-DD')                  2                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_Q3_2006  TO_DATE(' 2018-03-01', 'SYYYY-MM-DD')                  3                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_Q4_2006  TO_DATE(' 2018-04-01', 'SYYYY-MM-DD')                  4                  106496       57344                               
+*/
+
+-- To insert the data for partition (SALES_Q1_2006)
+INSERT INTO sales_enable_row_movement
+SELECT
+     ROWNUM                               prod_id,
+     MOD(ROWNUM,5000)+1                   cust_id,
+     TO_DATE('31-DEC-2017','DD-MON-YYYY') time_id,
+     'C'                                  channel_id,
+     LEVEL                                promo_id
+FROM dual
+CONNECT BY LEVEL <= 200000;
+--Insert - 200000 row(s), executed in 820 ms
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'SALES_ENABLE_ROW_MOVEMENT', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure
+SELECT
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows,
+     initial_extent,
+     next_extent,
+     min_extent,
+     max_extent,
+     max_size
+FROM 
+     all_tab_partitions
+WHERE table_name = 'SALES_ENABLE_ROW_MOVEMENT';
+/*
+TABLE_NAME                PARTITION_NAME HIGH_VALUE                           PARTITION_POSITION NUM_ROWS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT MAX_SIZE
+------------------------- -------------- ------------------------------------ ------------------ -------- -------------- ----------- ---------- ---------- ----------
+SALES_ENABLE_ROW_MOVEMENT SALES_Q1_2006  TO_DATE(' 2018-01-01', 'SYYYY-MM-DD')                 1   200000          24576       16384          1 2147483645 2147483645                             
+SALES_ENABLE_ROW_MOVEMENT SALES_Q2_2006  TO_DATE(' 2018-02-01', 'SYYYY-MM-DD')                 2                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_Q3_2006  TO_DATE(' 2018-03-01', 'SYYYY-MM-DD')                 3                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_Q4_2006  TO_DATE(' 2018-04-01', 'SYYYY-MM-DD')                 4                  106496       57344                               
+*/
+
+
+-- To insert the data for partition (SALES_Q2_2006)
+INSERT INTO sales_enable_row_movement
+SELECT
+     ROWNUM                               prod_id,
+     MOD(ROWNUM,5000)+1                   cust_id,
+     TO_DATE('30-JAN-2018','DD-MON-YYYY') time_id,
+     'C'                                  channel_id,
+     LEVEL                                promo_id
+FROM dual
+CONNECT BY LEVEL <= 200000;
+--Insert - 200000 row(s), executed in 820 ms
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'SALES_ENABLE_ROW_MOVEMENT', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure
+SELECT
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows,
+     initial_extent,
+     next_extent,
+     min_extent,
+     max_extent,
+     max_size
+FROM 
+     all_tab_partitions
+WHERE table_name = 'SALES_ENABLE_ROW_MOVEMENT';
+
+/*
+TABLE_NAME                PARTITION_NAME HIGH_VALUE                           PARTITION_POSITION NUM_ROWS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT MAX_SIZE
+------------------------- -------------- ------------------------------------ ------------------ -------- -------------- ----------- ---------- ---------- ----------
+SALES_ENABLE_ROW_MOVEMENT SALES_Q1_2006  TO_DATE(' 2018-01-01', 'SYYYY-MM-DD')                 1   200000          24576       16384          1 2147483645 2147483645
+SALES_ENABLE_ROW_MOVEMENT SALES_Q2_2006  TO_DATE(' 2018-02-01', 'SYYYY-MM-DD')                 2   200000         106496       57344          1 2147483645 2147483645
+SALES_ENABLE_ROW_MOVEMENT SALES_Q3_2006  TO_DATE(' 2018-03-01', 'SYYYY-MM-DD')                 3                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_Q4_2006  TO_DATE(' 2018-04-01', 'SYYYY-MM-DD')                 4                  106496       57344                               
+*/
+
 Creating range-partitioned (Interval-Partitioned) Tables.
 
 The INTERVAL clause of the CREATE TABLE statement establishes interval partitioning for the table.
