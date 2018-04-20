@@ -207,13 +207,13 @@ CREATE TABLE sales_enable_row_movement
 STORAGE (INITIAL 100K NEXT 50K) LOGGING
 PARTITION BY RANGE (time_id)
 (
- PARTITION sales_q1_2006 VALUES LESS THAN (TO_DATE('01-JAN-2018','DD-MON-YYYY'))
+ PARTITION sales_p1_2018 VALUES LESS THAN (TO_DATE('01-JAN-2018','DD-MON-YYYY'))
  TABLESPACE table_backup STORAGE (INITIAL 20K NEXT 10K),
- PARTITION sales_q2_2006 VALUES LESS THAN (TO_DATE('01-FEB-2018','DD-MON-YYYY'))
+ PARTITION sales_p2_2018 VALUES LESS THAN (TO_DATE('01-FEB-2018','DD-MON-YYYY'))
  TABLESPACE table_backup,
- PARTITION sales_q3_2006 VALUES LESS THAN (TO_DATE('01-MAR-2018','DD-MON-YYYY'))
+ PARTITION sales_p3_2018 VALUES LESS THAN (TO_DATE('01-MAR-2018','DD-MON-YYYY'))
  TABLESPACE table_backup,
- PARTITION sales_q4_2006 VALUES LESS THAN (TO_DATE('01-APR-2018','DD-MON-YYYY'))
+ PARTITION sales_p4_2018 VALUES LESS THAN (TO_DATE('01-APR-2018','DD-MON-YYYY'))
  TABLESPACE table_backup
 )
 ENABLE ROW MOVEMENT
@@ -238,13 +238,13 @@ WHERE table_name = 'SALES_ENABLE_ROW_MOVEMENT';
 /*
 TABLE_NAME                PARTITION_NAME HIGH_VALUE                           PARTITION_POSITION NUM_ROWS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT MAX_SIZE
 ------------------------- -------------- ------------------------------------ ------------------ -------- -------------- ----------- ---------- ---------- --------
-SALES_ENABLE_ROW_MOVEMENT SALES_Q1_2006  TO_DATE(' 2018-01-01', 'SYYYY-MM-DD')                  1                   24576       16384                               
-SALES_ENABLE_ROW_MOVEMENT SALES_Q2_2006  TO_DATE(' 2018-02-01', 'SYYYY-MM-DD')                  2                  106496       57344                               
-SALES_ENABLE_ROW_MOVEMENT SALES_Q3_2006  TO_DATE(' 2018-03-01', 'SYYYY-MM-DD')                  3                  106496       57344                               
-SALES_ENABLE_ROW_MOVEMENT SALES_Q4_2006  TO_DATE(' 2018-04-01', 'SYYYY-MM-DD')                  4                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_P1_2018  TO_DATE(' 2018-01-01', 'SYYYY-MM-DD')                  1                   24576       16384                               
+SALES_ENABLE_ROW_MOVEMENT SALES_P2_2018  TO_DATE(' 2018-02-01', 'SYYYY-MM-DD')                  2                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_P3_2018  TO_DATE(' 2018-03-01', 'SYYYY-MM-DD')                  3                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_P4_2018  TO_DATE(' 2018-04-01', 'SYYYY-MM-DD')                  4                  106496       57344                               
 */
 
--- To insert the data for partition (SALES_Q1_2006)
+-- To insert the data for partition (SALES_P1_2018)
 INSERT INTO sales_enable_row_movement
 SELECT
      ROWNUM                               prod_id,
@@ -289,14 +289,14 @@ WHERE table_name = 'SALES_ENABLE_ROW_MOVEMENT';
 /*
 TABLE_NAME                PARTITION_NAME HIGH_VALUE                           PARTITION_POSITION NUM_ROWS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT MAX_SIZE
 ------------------------- -------------- ------------------------------------ ------------------ -------- -------------- ----------- ---------- ---------- ----------
-SALES_ENABLE_ROW_MOVEMENT SALES_Q1_2006  TO_DATE(' 2018-01-01', 'SYYYY-MM-DD')                 1   200000          24576       16384          1 2147483645 2147483645                             
-SALES_ENABLE_ROW_MOVEMENT SALES_Q2_2006  TO_DATE(' 2018-02-01', 'SYYYY-MM-DD')                 2                  106496       57344                               
-SALES_ENABLE_ROW_MOVEMENT SALES_Q3_2006  TO_DATE(' 2018-03-01', 'SYYYY-MM-DD')                 3                  106496       57344                               
-SALES_ENABLE_ROW_MOVEMENT SALES_Q4_2006  TO_DATE(' 2018-04-01', 'SYYYY-MM-DD')                 4                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_P1_2018  TO_DATE(' 2018-01-01', 'SYYYY-MM-DD')                 1   200000          24576       16384          1 2147483645 2147483645                             
+SALES_ENABLE_ROW_MOVEMENT SALES_P2_2018  TO_DATE(' 2018-02-01', 'SYYYY-MM-DD')                 2                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_P3_2018  TO_DATE(' 2018-03-01', 'SYYYY-MM-DD')                 3                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_P4_2018  TO_DATE(' 2018-04-01', 'SYYYY-MM-DD')                 4                  106496       57344                               
 */
 
 
--- To insert the data for partition (SALES_Q2_2006)
+-- To insert the data for partition (SALES_P2_2018)
 INSERT INTO sales_enable_row_movement
 SELECT
      ROWNUM                               prod_id,
@@ -342,10 +342,10 @@ WHERE table_name = 'SALES_ENABLE_ROW_MOVEMENT';
 /*
 TABLE_NAME                PARTITION_NAME HIGH_VALUE                           PARTITION_POSITION NUM_ROWS INITIAL_EXTENT NEXT_EXTENT MIN_EXTENT MAX_EXTENT MAX_SIZE
 ------------------------- -------------- ------------------------------------ ------------------ -------- -------------- ----------- ---------- ---------- ----------
-SALES_ENABLE_ROW_MOVEMENT SALES_Q1_2006  TO_DATE(' 2018-01-01', 'SYYYY-MM-DD')                 1   200000          24576       16384          1 2147483645 2147483645
-SALES_ENABLE_ROW_MOVEMENT SALES_Q2_2006  TO_DATE(' 2018-02-01', 'SYYYY-MM-DD')                 2   200000         106496       57344          1 2147483645 2147483645
-SALES_ENABLE_ROW_MOVEMENT SALES_Q3_2006  TO_DATE(' 2018-03-01', 'SYYYY-MM-DD')                 3                  106496       57344                               
-SALES_ENABLE_ROW_MOVEMENT SALES_Q4_2006  TO_DATE(' 2018-04-01', 'SYYYY-MM-DD')                 4                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_P1_2018  TO_DATE(' 2018-01-01', 'SYYYY-MM-DD')                 1   200000          24576       16384          1 2147483645 2147483645
+SALES_ENABLE_ROW_MOVEMENT SALES_P2_2018  TO_DATE(' 2018-02-01', 'SYYYY-MM-DD')                 2   200000         106496       57344          1 2147483645 2147483645
+SALES_ENABLE_ROW_MOVEMENT SALES_P3_2018  TO_DATE(' 2018-03-01', 'SYYYY-MM-DD')                 3                  106496       57344                               
+SALES_ENABLE_ROW_MOVEMENT SALES_P4_2018  TO_DATE(' 2018-04-01', 'SYYYY-MM-DD')                 4                  106496       57344                               
 */
 
 Creating range-partitioned (Interval-Partitioned) Tables.
