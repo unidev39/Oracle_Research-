@@ -506,20 +506,157 @@ PROD_ID CUST_ID TIME_ID             CHANNEL_ID PROMO_ID QUANTITY_SOLD AMOUNT_SOL
       1       1 30.12.2030 00:00:00 A                 1             1           1
 */
 
-Using Virtual Column-Based Partitioning
+Using Virtual Column-Based Range-Partitioning
 
-With partitioning, a virtual column can be used as any regular column. All partition methods are supported when using 
-virtual columns, including interval partitioning and all different combinations of composite partitioning. A virtual 
-column used as the partitioning column cannot use calls to a PL/SQL function.
-
-The following example shows the sales_partitioning table partitioned by range-range using a virtual column for the subpartitioning key.
-The virtual column calculates the total value of a sale by multiplying amount_sold and quantity_sold.
-
-Creating a table with a virtual column for the subpartitioning key
+With partitioning, a virtual column can be used as any regular column. All partition methods are supported when using virtual columns.
+A virtual column used as the partitioning column cannot use calls to a PL/SQL function.
+The following example shows the sales_partitioning table partitioned by range-range using 
+a virtual  column with enable row movements and in no loging mode.
 
 -- To drop permanently from database (If the object exists)
 DROP TABLE sales_partitioning PURGE;
--- To Creating a multicolumn range-partitioned table with max values
+
+-- To Creating a Virtual column for the range-partitioned table with max values
+CREATE TABLE sales_partitioning
+( 
+  prod_id       NUMBER(6) NOT NULL,
+  cust_id       NUMBER NOT NULL,
+  time_id       DATE NOT NULL,
+  channel_id    CHAR(1) NOT NULL,
+  promo_id      NUMBER(6) NOT NULL,
+  quantity_sold NUMBER(3) NOT NULL,
+  amount_sold   NUMBER(10,2) NOT NULL,
+  total_amount  AS (quantity_sold * amount_sold)
+)
+PARTITION BY RANGE (time_id) 
+(
+ PARTITION sales_before_2018 VALUES LESS THAN (TO_DATE('01-JAN-2018','DD-MON-YYYY')) TABLESPACE TABLE_BACKUP,
+ PARTITION sales_after_2018 VALUES LESS THAN (MAXVALUE) TABLESPACE TABLE_BACKUP
+)
+ENABLE ROW MOVEMENT
+PARALLEL NOLOGGING;
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'SALES_PARTITIONING';
+
+/*
+TABLE_OWNER TABLE_NAME         PARTITION_NAME    HIGH_VALUE                                                                          PARTITION_POSITION NUM_ROWS
+----------- ------------------ ----------------- ----------------------------------------------------------------------------------- ------------------ --------
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 TO_DATE(' 2018-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  1         
+DSHRIVASTAV SALES_PARTITIONING SALES_AFTER_2018  MAXVALUE                                                                                             2         
+*/
+
+-- Insert the data for virtual columns
+INSERT INTO sales_partitioning 
+(
+ prod_id,
+ cust_id,
+ time_id,
+ channel_id,
+ promo_id,
+ quantity_sold,
+ amount_sold,
+ total_amount
+) 
+SELECT                       
+     1         prod_id,      
+     100       cust_id,      
+     SYSDATE   time_id,      
+     'A'       channel_id,   
+     10        promo_id,     
+     50        quantity_sold,
+     50        amount_sold,
+     2500      total_amount
+FROM 
+     dual;
+--ORA-54013: INSERT operation disallowed on virtual columns 
+ 
+-- Insert the data into table (sales_partitioning)
+INSERT INTO sales_partitioning 
+(
+ prod_id,
+ cust_id,
+ time_id,
+ channel_id,
+ promo_id,
+ quantity_sold,
+ amount_sold
+) 
+SELECT 
+     1         prod_id,      
+     100       cust_id,      
+     SYSDATE   time_id,      
+     'A'       channel_id,   
+     10        promo_id,     
+     50        quantity_sold,
+     50        amount_sold
+FROM 
+     dual;
+-- Insert - 1 row(s), executed in 148 ms 
+COMMIT;
+
+SELECT * FROM sales_partitioning;
+/*
+PROD_ID CUST_ID TIME_ID             CHANNEL_ID PROMO_ID QUANTITY_SOLD AMOUNT_SOLD TOTAL_AMOUNT
+------- ------- ------------------- ---------- -------- ------------- ----------- ------------
+      1     100 23.04.2018 11:24:32 A                10            50          50         2500
+*/
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'SALES_PARTITIONING', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'SALES_PARTITIONING';
+
+/*
+TABLE_OWNER TABLE_NAME         PARTITION_NAME    HIGH_VALUE                                                                          PARTITION_POSITION NUM_ROWS
+----------- ------------------ ----------------- ----------------------------------------------------------------------------------- ------------------ --------
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 TO_DATE(' 2018-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  1        0
+DSHRIVASTAV SALES_PARTITIONING SALES_AFTER_2018  MAXVALUE                                                                                             2        1
+*/
+-------------------------------------
+
+Using Virtual Column-Based Range-Range-Sub-Partitioning
+
+With partitioning, a virtual column can be used as any regular column. All partition methods are supported when using virtual columns,
+including interval partitioning and all different combinations of composite partitioning. A virtual column used as the partitioning column
+cannot use calls to a PL/SQL function.
+The following example shows the sales_partitioning table partitioned by range-range using a virtual column for the subpartitioning key.
+The virtual column calculates the total value of a sale by multiplying amount_sold and quantity_sold.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE sales_partitioning PURGE;
+
+-- To Creating a Virtual column for the range-range-subpartitioning-partitioned table with max values
 CREATE TABLE sales_partitioning
 ( 
   prod_id       NUMBER(6) NOT NULL,
@@ -536,80 +673,172 @@ INTERVAL (NUMTOYMINTERVAL(1,'MONTH'))
 SUBPARTITION BY RANGE(total_amount)
 SUBPARTITION TEMPLATE
 ( 
- SUBPARTITION p_small VALUES LESS THAN (1000),
- SUBPARTITION p_medium VALUES LESS THAN (5000),
- SUBPARTITION p_large VALUES LESS THAN (10000),
- SUBPARTITION p_extreme VALUES LESS THAN (MAXVALUE)
+ SUBPARTITION p_small   VALUES LESS THAN (1000)     TABLESPACE TABLE_BACKUP,
+ SUBPARTITION p_medium  VALUES LESS THAN (5000)     TABLESPACE TABLE_BACKUP,
+ SUBPARTITION p_large   VALUES LESS THAN (10000)    TABLESPACE TABLE_BACKUP,
+ SUBPARTITION p_extreme VALUES LESS THAN (MAXVALUE) TABLESPACE TABLE_BACKUP
 )
-(PARTITION sales_before_2018 VALUES LESS THAN (TO_DATE('01-JAN-2018','DD-MON-YYYY'))
+(PARTITION sales_before_2018 VALUES LESS THAN (TO_DATE('01-JAN-2018','DD-MON-YYYY')) TABLESPACE TABLE_BACKUP
 )
 ENABLE ROW MOVEMENT
 PARALLEL NOLOGGING;
 
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     subpartition_count,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'SALES_PARTITIONING';
+
+/*
+TABLE_OWNER TABLE_NAME         PARTITION_NAME    SUBPARTITION_COUNT HIGH_VALUE                                                                          PARTITION_POSITION NUM_ROWS
+----------- ------------------ ----------------- ------------------ ----------------------------------------------------------------------------------- ------------------ --------
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018                  4 TO_DATE(' 2018-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  1         
+*/
+
+-- To show the object structure(sub-partitions)
+SELECT 
+     table_owner,
+     table_name,
+     partition_name,
+     subpartition_name,
+     high_value,
+     high_value_length,
+     subpartition_position,
+     tablespace_name
+FROM 
+     all_tab_subpartitions
+WHERE table_name = 'SALES_PARTITIONING';
+
+/*
+TABLE_OWNER TABLE_NAME         PARTITION_NAME    SUBPARTITION_NAME           HIGH_VALUE HIGH_VALUE_LENGTH SUBPARTITION_POSITION TABLESPACE_NAME
+----------- ------------------ ----------------- --------------------------- ---------- ----------------- --------------------- ---------------
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_SMALL   1000                       4                     1 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_MEDIUM  5000                       4                     2 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_LARGE   10000                      5                     3 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_EXTREME MAXVALUE                   8                     4 TABLE_BACKUP   
+*/
+
+-- Insert the data for virtual columns
 INSERT INTO sales_partitioning 
 (
- prod_id,cust_id,time_id,channel_id,promo_id,quantity_sold,amount_sold,total_amount
+ prod_id,
+ cust_id,
+ time_id,
+ channel_id,
+ promo_id,
+ quantity_sold,
+ amount_sold,
+ total_amount
 ) 
-VALUES
-(
- 1,100,SYSDATE,'A',10,50,50,2500
-);
+SELECT                       
+     1         prod_id,      
+     100       cust_id,      
+     SYSDATE   time_id,      
+     'A'       channel_id,   
+     10        promo_id,     
+     50        quantity_sold,
+     50        amount_sold,
+     2500      total_amount
+FROM 
+     dual;
 --ORA-54013: INSERT operation disallowed on virtual columns 
  
+-- Insert the data into table (sales_partitioning)
 INSERT INTO sales_partitioning 
 (
- prod_id,cust_id,time_id,channel_id,promo_id,quantity_sold,amount_sold
+ prod_id,
+ cust_id,
+ time_id,
+ channel_id,
+ promo_id,
+ quantity_sold,
+ amount_sold
 ) 
-VALUES
-(
- 1,100,SYSDATE,'A',10,50,50
-);
+SELECT 
+     1         prod_id,      
+     100       cust_id,      
+     SYSDATE   time_id,      
+     'A'       channel_id,   
+     10        promo_id,     
+     50        quantity_sold,
+     50        amount_sold
+FROM 
+     dual;
+-- Insert - 1 row(s), executed in 148 ms 
 COMMIT;
 
 SELECT * FROM sales_partitioning;
 /*
 PROD_ID CUST_ID TIME_ID             CHANNEL_ID PROMO_ID QUANTITY_SOLD AMOUNT_SOLD TOTAL_AMOUNT
 ------- ------- ------------------- ---------- -------- ------------- ----------- ------------
-      1     100 05.02.2018 13:35:38 A                10            50          50         2500
+      1     100 23.04.2018 13:35:38 A                10            50          50         2500
 */
 
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'SALES_PARTITIONING', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
 
-Using Table Compression with Partitioned Tables
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     subpartition_count,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'SALES_PARTITIONING';
 
-For range-organized partitioned tables, you can compress some or all partitions using table compression.
-The compression attribute can be declared for a tablespace, a table, or a partition of a table. Whenever 
-the compress attribute is not specified, it is inherited like any other storage attribute.
-
-The following example creates a range-partitioned table with one compressed partition costs_old.
-The compression attribute for the table and all other partitions is inherited from the tablespace level.
-
-Creating a range-partitioned table with a compressed partition
-
--- To drop permanently from database (If the object exists)
-DROP TABLE compress_partitioning PURGE;
--- To Creating a compress range-partitioned table
-CREATE TABLE compress_partitioning 
-(
-   prod_id     NUMBER(6),
-   time_id     DATE, 
-   unit_cost   NUMBER(10,2),
-   unit_price  NUMBER(10,2)
-)
-PARTITION BY RANGE (time_id)
-(
- PARTITION costs_old     VALUES LESS THAN (TO_DATE('01-JAN-2003', 'DD-MON-YYYY')) COMPRESS,
- PARTITION costs_q1_2003 VALUES LESS THAN (TO_DATE('01-APR-2003', 'DD-MON-YYYY')) COMPRESS,
- PARTITION costs_q2_2003 VALUES LESS THAN (TO_DATE('01-JUN-2003', 'DD-MON-YYYY')) COMPRESS,
- PARTITION costs_recent VALUES LESS THAN (MAXVALUE) COMPRESS
-);
-
-INSERT INTO compress_partitioning VALUES(1,SYSDATE,10,10);
-COMMIT;
-
-SELECT * FROM compress_partitioning PARTITION (costs_recent);
 /*
-PROD_ID TIME_ID             UNIT_COST UNIT_PRICE
-------- ------------------- --------- ----------
-      1 05.02.2018 15:26:09        10         10
+TABLE_OWNER TABLE_NAME         PARTITION_NAME    SUBPARTITION_COUNT HIGH_VALUE                                                                          PARTITION_POSITION NUM_ROWS
+----------- ------------------ ----------------- ------------------ ----------------------------------------------------------------------------------- ------------------ --------
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018                  4 TO_DATE(' 2018-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  1        0
+DSHRIVASTAV SALES_PARTITIONING SYS_P97805                         4 TO_DATE(' 2018-05-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  2        1
+*/
+
+-- To show the object structure(sub-partitions)
+SELECT 
+     table_owner,
+     table_name,
+     partition_name,
+     subpartition_name,
+     high_value,
+     high_value_length,
+     subpartition_position,
+     tablespace_name
+FROM 
+     all_tab_subpartitions
+WHERE table_name = 'SALES_PARTITIONING';
+
+/*
+TABLE_OWNER TABLE_NAME         PARTITION_NAME    SUBPARTITION_NAME           HIGH_VALUE HIGH_VALUE_LENGTH SUBPARTITION_POSITION TABLESPACE_NAME
+----------- ------------------ ----------------- --------------------------- ---------- ----------------- --------------------- ---------------
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_SMALL   1000                       4                     1 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_MEDIUM  5000                       4                     2 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_LARGE   10000                      5                     3 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_EXTREME MAXVALUE                   8                     4 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SYS_P97805        SYS_SUBP97801               1000                       4                     1 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SYS_P97805        SYS_SUBP97802               5000                       4                     2 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SYS_P97805        SYS_SUBP97803               10000                      5                     3 TABLE_BACKUP   
+DSHRIVASTAV SALES_PARTITIONING SYS_P97805        SYS_SUBP97804               MAXVALUE                   8                     4 TABLE_BACKUP   
 */
 
