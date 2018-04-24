@@ -1076,7 +1076,7 @@ DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97833                                
 DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97834                                 2 RETAIL_DATA             
 */
 
--- Insert the data for virtual columns
+-- Insert the data
 INSERT INTO HASH_PARTITIONING_NO_NAME VALUES (1,SYSDATE,'A');
 -- Insert - 1 row(s), executed in 148 ms 
 COMMIT;
@@ -1166,7 +1166,7 @@ DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P1                                      
 DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P2                                         2 RETAIL_DATA             
 */
 
--- Insert the data for virtual columns
+-- Insert the data
 INSERT INTO hash_partitioning_with_name VALUES (1,SYSDATE,'A');
 -- Insert - 1 row(s), executed in 148 ms 
 COMMIT;
@@ -1304,7 +1304,7 @@ DSHRIVASTAV LIST_PARTITIONED LIST_P1        'A'                         1 TABLE_
 DSHRIVASTAV LIST_PARTITIONED LIST_P2        'B', 'C'                    2 TABLE_BACKUP   
 */
 
--- Insert the data for virtual columns
+-- Insert the data
 INSERT INTO list_partitioned VALUES (2,'dpt_2','B');
 -- Insert - 1 row(s), executed in 148 ms 
 COMMIT;
@@ -1316,7 +1316,7 @@ DEPTNO DEPTNAME ALPHABETS
      2 dpt_2    B        
 */
 
--- Insert the data for virtual columns
+-- Insert the data
 INSERT INTO list_partitioned VALUES (3,'dpt_3','E');
 -- ORA-14400: inserted partition key does not map to any partition
 
@@ -1364,7 +1364,7 @@ DSHRIVASTAV LIST_PARTITIONED_DEFAULT LIST_P2        'B', 'C'                    
 DSHRIVASTAV LIST_PARTITIONED_DEFAULT LIST_P_OTHERS  DEFAULT                     3 TABLE_BACKUP   
 */
 
--- Insert the data for virtual columns
+-- Insert the data
 INSERT INTO list_partitioned_default VALUES (3,'dpt_3','E');
 -- Insert - 1 row(s), executed in 148 ms 
 COMMIT;
@@ -1376,7 +1376,7 @@ DEPTNO DEPTNAME ALPHABETS
      3 dpt_3    E        
 */
 
--- Insert the data for virtual columns => i.e Wrong approach 
+-- Insert the data => i.e Wrong approach 
 INSERT INTO list_partitioned_default VALUES (4,'dpt_4',NULL);
 -- Insert - 1 row(s), executed in 148 ms 
 COMMIT;
@@ -1430,7 +1430,7 @@ DSHRIVASTAV LIST_PARTITIONED_DEFAULT_NULL LIST_P_NULLS   NULL                   
 DSHRIVASTAV LIST_PARTITIONED_DEFAULT_NULL LIST_P_OTHERS  DEFAULT                     4 TABLE_BACKUP   
 */
 
--- Insert the data for virtual columns
+-- Insert the data
 INSERT INTO list_partitioned_default_null VALUES (4,'dpt_',NULL);
 -- Insert - 1 row(s), executed in 148 ms 
 COMMIT;
@@ -1442,7 +1442,7 @@ DEPTNO DEPTNAME ALPHABETS
      3 dpt_            
 */
 
--- Insert the data for virtual columns
+-- Insert the data
 INSERT INTO list_partitioned_default_null VALUES (4,'dpt_4','E');
 -- Insert - 1 row(s), executed in 148 ms 
 COMMIT;
