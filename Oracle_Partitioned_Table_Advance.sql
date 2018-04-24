@@ -1034,3 +1034,218 @@ DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q2_2018        TO_DATE(' 2018-07-01 00
 DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q3_2018        TO_DATE(' 2018-10-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  3        0
 DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q4_2018        TO_DATE(' 2018-12-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  4        0
 */
+
+Hash Partitioning Tables
+
+Hash partitioning is useful when there is no obvious range key, or range partitioning will cause uneven distribution of data. 
+The number of partitions must be a power of 2 (2, 4, 8, 16...) and can be specified by the PARTITIONS...STORE IN clause.
+The nature of hash partitioning depend on The values returned by a hash function are called hash values, hash codes, digests, or simply hashes.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE hash_partitioning_no_name PURGE;
+
+-- To Creating a Hash Partitioning table without partitions name
+CREATE TABLE hash_partitioning_no_name
+(
+ hash_no    NUMBER NOT NULL,
+ hash_date  DATE   NOT NULL,
+ comments          VARCHAR2(500)
+)
+PARTITION BY HASH (hash_no)
+PARTITIONS 2
+STORE IN (table_backup, retail_data)
+;
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'HASH_PARTITIONING_NO_NAME';
+
+/*
+TABLE_OWNER TABLE_NAME                PARTITION_NAME HIGH_VALUE PARTITION_POSITION NUM_ROWS
+----------- ------------------------- -------------- ---------- ------------------ --------
+DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97831                                 1         
+DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97832                                 2         
+*/
+
+-- Insert the data for virtual columns
+INSERT INTO HASH_PARTITIONING_NO_NAME VALUES (1,SYSDATE,'A');
+-- Insert - 1 row(s), executed in 148 ms 
+COMMIT;
+
+SELECT * FROM HASH_PARTITIONING_NO_NAME;
+/*
+HASH_NO HASH_DATE           COMMENTS
+------- ------------------- --------
+      1 24.04.2018 09:38:30 A       
+*/
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'HASH_PARTITIONING_NO_NAME', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'HASH_PARTITIONING_NO_NAME';
+
+/*
+TABLE_OWNER TABLE_NAME                PARTITION_NAME HIGH_VALUE PARTITION_POSITION NUM_ROWS
+----------- ------------------------- -------------- ---------- ------------------ --------
+DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97831                                 1        0      
+DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97832                                 2        1 
+*/
+
+SELECT * FROM HASH_PARTITIONING_NO_NAME PARTITION(sys_p97832);
+/*
+HASH_NO HASH_DATE           COMMENTS
+------- ------------------- --------
+      1 24.04.2018 09:38:30 A       
+*/
+-----
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE hash_partitioning_with_name PURGE;
+
+-- To Creating a Hash Partitioning table with partitions name/tablespace name
+CREATE TABLE hash_partitioning_with_name
+(
+ hash_no    NUMBER NOT NULL,
+ hash_date  DATE   NOT NULL,
+ comments          VARCHAR2(500)
+)
+PARTITION BY HASH (hash_no)
+(
+ PARTITION p1 TABLESPACE table_backup,
+ PARTITION p2 TABLESPACE retail_data
+);
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'HASH_PARTITIONING_WITH_NAME';
+
+/*
+TABLE_OWNER TABLE_NAME                  PARTITION_NAME HIGH_VALUE PARTITION_POSITION NUM_ROWS
+----------- --------------------------- -------------- ---------- ------------------ --------
+DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P1                                         1         
+DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P2                                         2         
+*/
+
+-- Insert the data for virtual columns
+INSERT INTO hash_partitioning_with_name VALUES (1,SYSDATE,'A');
+-- Insert - 1 row(s), executed in 148 ms 
+COMMIT;
+
+SELECT * FROM hash_partitioning_with_name;
+/*
+HASH_NO HASH_DATE           COMMENTS
+------- ------------------- --------
+      1 24.04.2018 09:38:30 A       
+*/
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'HASH_PARTITIONING_WITH_NAME', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name = 'HASH_PARTITIONING_WITH_NAME';
+
+/*
+TABLE_OWNER TABLE_NAME                  PARTITION_NAME HIGH_VALUE PARTITION_POSITION NUM_ROWS
+----------- --------------------------- -------------- ---------- ------------------ --------
+DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P1                                         1        0
+DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P2                                         2        1
+*/
+
+SELECT * FROM hash_partitioning_with_name PARTITION(p2);
+/*
+HASH_NO HASH_DATE           COMMENTS
+------- ------------------- --------
+      1 24.04.2018 09:38:30 A       
+*/
+
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE hash_partitioning_compress PURGE;
+
+-- To Creating a Hash Partitioning table with compressed
+CREATE TABLE hash_partitioning_compress
+(
+ hash_no    NUMBER NOT NULL,
+ hash_date  DATE   NOT NULL,
+ comments          VARCHAR2(500)
+)
+PARTITION BY HASH (hash_no)
+(
+ PARTITION p1 TABLESPACE table_backup COMPRESS,
+ PARTITION p2 TABLESPACE retail_data  COMPRESS
+);
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE hash_partitioning_enablerowmv PURGE;
+
+-- To Creating a Hash Partitioning table with enable row movment/logging/parallel
+CREATE TABLE hash_partitioning_enablerowmv
+(
+ hash_no    NUMBER NOT NULL,
+ hash_date  DATE   NOT NULL,
+ comments          VARCHAR2(500)
+)
+STORAGE (INITIAL 100K NEXT 50K) LOGGING
+PARTITION BY HASH (hash_no)
+(
+ PARTITION p1 TABLESPACE table_backup
+)
+ENABLE ROW MOVEMENT
+PARALLEL;
