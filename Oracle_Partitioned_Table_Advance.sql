@@ -1253,3 +1253,247 @@ PARTITION BY HASH (hash_no)
 )
 ENABLE ROW MOVEMENT
 PARALLEL;
+
+List-Partitioned Tables - Example
+
+The semantics for creating list partitions are very similar to those for creating range partitions. 
+However, to create list partitions, you specify a PARTITION BY LIST clause in the 
+CREATE TABLE statement, and the PARTITION clauses specify lists of literal values, 
+which are the discrete values of the partitioning columns that qualify rows to be included in the partition. 
+For list partitioning, the partitioning key can only be a single column name from the table.
+
+Available only with list partitioning, you can use the keyword DEFAULT to describe the value list for a partition. 
+This identifies a partition that accommodates rows that do not map into any of the other partitions.
+
+List-Partitioned Tables - Example
+
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE list_partitioned PURGE;
+
+-- To Creating a List Partitioning table
+CREATE TABLE list_partitioned
+(
+ deptno          NUMBER, 
+ deptname        VARCHAR2(20),
+ alphabets       VARCHAR2(20)
+)
+PARTITION BY LIST (alphabets)
+(
+ PARTITION list_p1  VALUES ('A'),
+ PARTITION list_p2  VALUES ('B','C')
+)
+TABLESPACE TABLE_BACKUP;
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     tablespace_name
+FROM 
+     all_tab_partitions
+WHERE table_name = 'LIST_PARTITIONED';
+
+/*
+TABLE_OWNER TABLE_NAME       PARTITION_NAME HIGH_VALUE PARTITION_POSITION TABLESPACE_NAME
+----------- ---------------- -------------- ---------- ------------------ ---------------
+DSHRIVASTAV LIST_PARTITIONED LIST_P1        'A'                         1 TABLE_BACKUP   
+DSHRIVASTAV LIST_PARTITIONED LIST_P2        'B', 'C'                    2 TABLE_BACKUP   
+*/
+
+-- Insert the data for virtual columns
+INSERT INTO list_partitioned VALUES (2,'dpt_2','B');
+-- Insert - 1 row(s), executed in 148 ms 
+COMMIT;
+
+SELECT * FROM list_partitioned PARTITION(list_p2);
+/*
+DEPTNO DEPTNAME ALPHABETS
+------ -------- ---------
+     2 dpt_2    B        
+*/
+
+-- Insert the data for virtual columns
+INSERT INTO list_partitioned VALUES (3,'dpt_3','E');
+-- ORA-14400: inserted partition key does not map to any partition
+
+Creating a List-Partitioned Table With a Default Partition
+
+Unlike range partitioning, with list partitioning, there is no apparent sense of order between partitions.
+You can also specify a default partition into which rows that do not map to any other partition are mapped.
+If a default partition were specified in the preceding example, the state CA would map to that partition.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE list_partitioned_default PURGE;
+
+-- To Creating a List Partitioning table
+CREATE TABLE list_partitioned_default
+(
+ deptno          NUMBER, 
+ deptname        VARCHAR2(20),
+ alphabets       VARCHAR2(20)
+)
+PARTITION BY LIST (alphabets)
+(
+ PARTITION list_p1        VALUES ('A'),
+ PARTITION list_p2        VALUES ('B','C'),
+ PARTITION list_p_others  VALUES (DEFAULT)
+)
+TABLESPACE TABLE_BACKUP;
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     tablespace_name
+FROM 
+     all_tab_partitions
+WHERE table_name = 'LIST_PARTITIONED_DEFAULT';
+
+/*
+TABLE_OWNER TABLE_NAME               PARTITION_NAME HIGH_VALUE PARTITION_POSITION TABLESPACE_NAME
+----------- ------------------------ -------------- ---------- ------------------ ---------------
+DSHRIVASTAV LIST_PARTITIONED_DEFAULT LIST_P1        'A'                         1 TABLE_BACKUP   
+DSHRIVASTAV LIST_PARTITIONED_DEFAULT LIST_P2        'B', 'C'                    2 TABLE_BACKUP   
+DSHRIVASTAV LIST_PARTITIONED_DEFAULT LIST_P_OTHERS  DEFAULT                     3 TABLE_BACKUP   
+*/
+
+-- Insert the data for virtual columns
+INSERT INTO list_partitioned_default VALUES (3,'dpt_3','E');
+-- Insert - 1 row(s), executed in 148 ms 
+COMMIT;
+
+SELECT * FROM list_partitioned_default PARTITION(list_p_others);
+/*
+DEPTNO DEPTNAME ALPHABETS
+------ -------- ---------
+     3 dpt_3    E        
+*/
+
+-- Insert the data for virtual columns => i.e Wrong approach 
+INSERT INTO list_partitioned_default VALUES (4,'dpt_4',NULL);
+-- Insert - 1 row(s), executed in 148 ms 
+COMMIT;
+
+SELECT * FROM list_partitioned_default PARTITION(list_p_others);
+/*
+DEPTNO DEPTNAME ALPHABETS
+     3 dpt_3    E        
+     4 dpt_4             
+*/
+
+Creating a List-Partitioned Table With a DEFAULT/NULL Partition 
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE list_partitioned_default_null PURGE;
+
+-- To Creating a List Partitioning table
+CREATE TABLE list_partitioned_default_null
+(
+ deptno          NUMBER, 
+ deptname        VARCHAR2(20),
+ alphabets       VARCHAR2(20)
+)
+PARTITION BY LIST (alphabets)
+(
+ PARTITION list_p1        VALUES ('A'),
+ PARTITION list_p2        VALUES ('B','C'),
+ PARTITION list_p_nulls   VALUES (NULL),
+ PARTITION list_p_others  VALUES (DEFAULT)
+)
+TABLESPACE TABLE_BACKUP;
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     tablespace_name
+FROM 
+     all_tab_partitions
+WHERE table_name = 'LIST_PARTITIONED_DEFAULT_NULL';
+
+/*
+TABLE_OWNER TABLE_NAME                    PARTITION_NAME HIGH_VALUE PARTITION_POSITION TABLESPACE_NAME
+----------- ----------------------------- -------------- ---------- ------------------ ---------------
+DSHRIVASTAV LIST_PARTITIONED_DEFAULT_NULL LIST_P1        'A'                         1 TABLE_BACKUP   
+DSHRIVASTAV LIST_PARTITIONED_DEFAULT_NULL LIST_P2        'B', 'C'                    2 TABLE_BACKUP   
+DSHRIVASTAV LIST_PARTITIONED_DEFAULT_NULL LIST_P_NULLS   NULL                        3 TABLE_BACKUP   
+DSHRIVASTAV LIST_PARTITIONED_DEFAULT_NULL LIST_P_OTHERS  DEFAULT                     4 TABLE_BACKUP   
+*/
+
+-- Insert the data for virtual columns
+INSERT INTO list_partitioned_default_null VALUES (4,'dpt_',NULL);
+-- Insert - 1 row(s), executed in 148 ms 
+COMMIT;
+
+SELECT * FROM list_partitioned_default_null PARTITION(list_p_nulls);
+/*
+DEPTNO DEPTNAME ALPHABETS
+------ -------- ---------
+     3 dpt_            
+*/
+
+-- Insert the data for virtual columns
+INSERT INTO list_partitioned_default_null VALUES (4,'dpt_4','E');
+-- Insert - 1 row(s), executed in 148 ms 
+COMMIT;
+
+SELECT * FROM list_partitioned_default_null PARTITION(list_p_others);
+/*
+DEPTNO DEPTNAME ALPHABETS
+     4 dpt_4    E                   
+*/
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE list_partitioned PURGE;
+
+-- To Creating a List Partitioning table
+CREATE TABLE list_partitioned
+(
+ deptno          NUMBER, 
+ deptname        VARCHAR2(20),
+ alphabets       VARCHAR2(20)
+)
+STORAGE(INITIAL 100K NEXT 10K) TABLESPACE TABLE_BACKUP
+PARTITION BY LIST (alphabets)
+(
+ PARTITION list_p1        VALUES ('A')      COMPRESS,
+ PARTITION list_p2        VALUES ('B','C')  STORAGE(INITIAL 1K NEXT 20K) TABLESPACE SHRIVASTAV,
+ PARTITION list_p_nulls   VALUES (NULL),
+ PARTITION list_p_others  VALUES (DEFAULT)
+)
+ENABLE ROW MOVEMENT
+PARALLEL LOGGING;
+
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     tablespace_name,
+     initial_extent,
+     next_extent,
+     logging,
+     compression
+FROM 
+     all_tab_partitions
+WHERE table_name = 'LIST_PARTITIONED';
+
+/*
+TABLE_OWNER TABLE_NAME       PARTITION_NAME HIGH_VALUE PARTITION_POSITION TABLESPACE_NAME INITIAL_EXTENT NEXT_EXTENT LOGGING COMPRESSION
+----------- ---------------- -------------- ---------- ------------------ --------------- -------------- ----------- ------- -----------
+DSHRIVASTAV LIST_PARTITIONED LIST_P1        'A'                         1 TABLE_BACKUP            106496       16384 YES     ENABLED    
+DSHRIVASTAV LIST_PARTITIONED LIST_P2        'B', 'C'                    2 SHRIVASTAV               16384       24576 YES     DISABLED   
+DSHRIVASTAV LIST_PARTITIONED LIST_P_NULLS   NULL                        3 TABLE_BACKUP            106496       16384 YES     DISABLED   
+DSHRIVASTAV LIST_PARTITIONED LIST_P_OTHERS  DEFAULT                     4 TABLE_BACKUP            106496       16384 YES     DISABLED   
+*/
