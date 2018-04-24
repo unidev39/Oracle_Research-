@@ -1063,16 +1063,17 @@ SELECT
      partition_name,
      high_value,
      partition_position,
+     tablespace_name,
      num_rows
 FROM 
      all_tab_partitions
 WHERE table_name = 'HASH_PARTITIONING_NO_NAME';
 
 /*
-TABLE_OWNER TABLE_NAME                PARTITION_NAME HIGH_VALUE PARTITION_POSITION NUM_ROWS
------------ ------------------------- -------------- ---------- ------------------ --------
-DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97831                                 1         
-DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97832                                 2         
+TABLE_OWNER TABLE_NAME                PARTITION_NAME HIGH_VALUE PARTITION_POSITION TABLESPACE_NAME NUM_ROWS
+----------- ------------------------- -------------- ---------- ------------------ --------------- --------
+DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97833                                 1 TABLE_BACKUP            
+DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97834                                 2 RETAIL_DATA             
 */
 
 -- Insert the data for virtual columns
@@ -1108,16 +1109,17 @@ SELECT
      partition_name,
      high_value,
      partition_position,
+     tablespace_name,
      num_rows
 FROM 
      all_tab_partitions
 WHERE table_name = 'HASH_PARTITIONING_NO_NAME';
 
 /*
-TABLE_OWNER TABLE_NAME                PARTITION_NAME HIGH_VALUE PARTITION_POSITION NUM_ROWS
------------ ------------------------- -------------- ---------- ------------------ --------
-DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97831                                 1        0      
-DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97832                                 2        1 
+TABLE_OWNER TABLE_NAME                PARTITION_NAME HIGH_VALUE PARTITION_POSITION TABLESPACE_NAME NUM_ROWS
+----------- ------------------------- -------------- ---------- ------------------ --------------- --------
+DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97833                                 1 TABLE_BACKUP           0
+DSHRIVASTAV HASH_PARTITIONING_NO_NAME SYS_P97834                                 2 RETAIL_DATA            1
 */
 
 SELECT * FROM HASH_PARTITIONING_NO_NAME PARTITION(sys_p97832);
@@ -1151,16 +1153,17 @@ SELECT
      partition_name,
      high_value,
      partition_position,
+     tablespace_name,
      num_rows
 FROM 
      all_tab_partitions
 WHERE table_name = 'HASH_PARTITIONING_WITH_NAME';
 
 /*
-TABLE_OWNER TABLE_NAME                  PARTITION_NAME HIGH_VALUE PARTITION_POSITION NUM_ROWS
------------ --------------------------- -------------- ---------- ------------------ --------
-DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P1                                         1         
-DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P2                                         2         
+TABLE_OWNER TABLE_NAME                  PARTITION_NAME HIGH_VALUE PARTITION_POSITION TABLESPACE_NAME NUM_ROWS
+----------- --------------------------- -------------- ---------- ------------------ --------------- --------
+DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P1                                         1 TABLE_BACKUP            
+DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P2                                         2 RETAIL_DATA             
 */
 
 -- Insert the data for virtual columns
@@ -1196,16 +1199,17 @@ SELECT
      partition_name,
      high_value,
      partition_position,
+     tablespace_name,
      num_rows
 FROM 
      all_tab_partitions
 WHERE table_name = 'HASH_PARTITIONING_WITH_NAME';
 
 /*
-TABLE_OWNER TABLE_NAME                  PARTITION_NAME HIGH_VALUE PARTITION_POSITION NUM_ROWS
------------ --------------------------- -------------- ---------- ------------------ --------
-DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P1                                         1        0
-DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P2                                         2        1
+TABLE_OWNER TABLE_NAME                  PARTITION_NAME HIGH_VALUE PARTITION_POSITION TABLESPACE_NAME NUM_ROWS
+----------- --------------------------- -------------- ---------- ------------------ --------------- --------
+DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P1                                         1 TABLE_BACKUP           0
+DSHRIVASTAV HASH_PARTITIONING_WITH_NAME P2                                         2 RETAIL_DATA            1
 */
 
 SELECT * FROM hash_partitioning_with_name PARTITION(p2);
