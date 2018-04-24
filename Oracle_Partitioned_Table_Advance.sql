@@ -842,3 +842,195 @@ DSHRIVASTAV SALES_PARTITIONING SYS_P97805        SYS_SUBP97803               100
 DSHRIVASTAV SALES_PARTITIONING SYS_P97805        SYS_SUBP97804               MAXVALUE                   8                     4 TABLE_BACKUP   
 */
 
+Creating reference-partitioned tables
+
+To create a reference-partitioned table, you specify a PARTITION BY REFERENCE clause in the CREATE TABLE statement.
+This clause specifies the name of a referential constraint and this constraint becomes the partitioning referential
+constraint that is used as the basis for reference partitioning in the table.
+The referential constraint must be enabled and enforced.
+
+As with other partitioned tables, you can specify object-level default attributes, and you can optionally specify
+partition descriptors that override the object-level defaults on a per-partition basis.
+
+The following example creates a parent table parent_orders_partitioned which is range-partitioned on order_date. The reference-partitioned
+child table child_order_items_partitioned is created with four partitions, Q1_2018, Q2_2018, Q3_2018, and Q4_2018, where each PARTITION
+contains the child_order_items_partitioned rows corresponding to parent_orders_partitioned in the respective parent partition.
+
+Creating reference-partitioned tables - Example
+
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE parent_orders_partitioned PURGE;
+
+-- To Creating a range reference-partitioning, Parent-table
+CREATE TABLE parent_orders_partitioned
+(
+ order_id           NUMBER(12),
+ order_date         DATE,
+ order_mode         VARCHAR2(8),
+ customer_id        NUMBER(6),
+ order_status       NUMBER(2),
+ order_total        NUMBER(8,2),
+ sales_rep_id       NUMBER(6),
+ promotion_id       NUMBER(6),
+ CONSTRAINT orders_pk PRIMARY KEY(order_id)
+)
+PARTITION BY RANGE(order_date)
+( 
+ PARTITION Q1_2018 VALUES LESS THAN (TO_DATE('01-APR-2018','DD-MON-YYYY')),
+ PARTITION Q2_2018 VALUES LESS THAN (TO_DATE('01-JUL-2018','DD-MON-YYYY')),
+ PARTITION Q3_2018 VALUES LESS THAN (TO_DATE('01-OCT-2018','DD-MON-YYYY')),
+ PARTITION Q4_2018 VALUES LESS THAN (TO_DATE('01-DEC-2018','DD-MON-YYYY'))
+);
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE parent_orders_partitioned PURGE;
+
+-- To Creating a range reference-partitioning, Child-table
+CREATE TABLE child_order_items_partitioned
+( 
+ order_id           NUMBER(12) NOT NULL,
+ line_item_id       NUMBER(3)  NOT NULL,
+ product_id         NUMBER(6)  NOT NULL,
+ unit_price         NUMBER(8,2),
+ quantity           NUMBER(8),
+ CONSTRAINT fk_child_order_items_partition
+ FOREIGN KEY(order_id)
+ REFERENCES parent_orders_partitioned(order_id)
+)
+PARTITION BY REFERENCE(fk_child_order_items_partition);
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name IN ('PARENT_ORDERS_PARTITIONED','CHILD_ORDER_ITEMS_PARTITIONED');
+/*
+TABLE_OWNER TABLE_NAME                    PARTITION_NAME HIGH_VALUE                                                                          PARTITION_POSITION NUM_ROWS
+----------- ----------------------------- -------------- ----------------------------------------------------------------------------------- ------------------ --------
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED Q1_2018                                                                                                             1         
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED Q2_2018                                                                                                             2         
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED Q3_2018                                                                                                             3         
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED Q4_2018                                                                                                             4         
+DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q1_2018        TO_DATE(' 2018-04-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  1         
+DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q2_2018        TO_DATE(' 2018-07-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  2         
+DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q3_2018        TO_DATE(' 2018-10-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  3         
+DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q4_2018        TO_DATE(' 2018-12-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  4         
+*/
+SELECT 
+     owner,
+     table_name,
+     constraint_name,
+     status,validated
+FROM 
+     user_constraints
+WHERE table_name IN ('PARENT_ORDERS_PARTITIONED','CHILD_ORDER_ITEMS_PARTITIONED');
+/*
+OWNER       TABLE_NAME                    CONSTRAINT_NAME                STATUS  VALIDATED
+----------- ----------------------------- ------------------------------ ------- ---------
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED SYS_C00104903                  ENABLED VALIDATED
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED SYS_C00104904                  ENABLED VALIDATED
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED SYS_C00104905                  ENABLED VALIDATED
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED FK_CHILD_ORDER_ITEMS_PARTITION ENABLED VALIDATED
+DSHRIVASTAV PARENT_ORDERS_PARTITIONED     ORDERS_PK                      ENABLED VALIDATED
+*/
+
+INSERT INTO parent_orders_partitioned
+(
+ order_id,
+ order_date,
+ order_mode,
+ customer_id,
+ order_status,
+ order_total,
+ sales_rep_id,
+ promotion_id
+)
+SELECT
+     1       order_id,
+     SYSDATE order_date,
+     'Y'     order_mode,
+     100     customer_id,
+     1       order_status,
+     5000    order_total,
+     5       sales_rep_id,
+     2       promotion_id 
+FROM dual;
+--Insert - 1 row(s), executed in 28 ms
+COMMIT;
+
+INSERT INTO child_order_items_partitioned
+( 
+ order_id,
+ line_item_id,
+ product_id,
+ unit_price,
+ quantity
+)
+SELECT
+     1       order_id,
+     1       line_item_id,
+     5       product_id,
+     5       unit_price,
+     5000    quantity 
+FROM dual;
+--Insert - 1 row(s), executed in 80 ms
+COMMIT;
+  
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'PARENT_ORDERS_PARTITIONED', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'CHILD_ORDER_ITEMS_PARTITIONED', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+
+-- To show the object structure(partitions)
+SELECT
+     table_owner,
+     table_name,
+     partition_name,
+     high_value,
+     partition_position,
+     num_rows
+FROM 
+     all_tab_partitions
+WHERE table_name IN ('PARENT_ORDERS_PARTITIONED','CHILD_ORDER_ITEMS_PARTITIONED');
+/*
+TABLE_OWNER TABLE_NAME                    PARTITION_NAME HIGH_VALUE                                                                          PARTITION_POSITION NUM_ROWS
+----------- ----------------------------- -------------- ----------------------------------------------------------------------------------- ------------------ --------
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED Q1_2018                                                                                                             1        0
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED Q2_2018                                                                                                             2        1
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED Q3_2018                                                                                                             3        0
+DSHRIVASTAV CHILD_ORDER_ITEMS_PARTITIONED Q4_2018                                                                                                             4        0
+DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q1_2018        TO_DATE(' 2018-04-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  1        0
+DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q2_2018        TO_DATE(' 2018-07-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  2        1
+DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q3_2018        TO_DATE(' 2018-10-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  3        0
+DSHRIVASTAV PARENT_ORDERS_PARTITIONED     Q4_2018        TO_DATE(' 2018-12-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')                  4        0
+*/
