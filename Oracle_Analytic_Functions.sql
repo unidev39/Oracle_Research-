@@ -320,3 +320,37 @@ NUMBER_DATA STRING_DATA     WILDCARD_DATA
 ----------- --------------- -------------
          52 aiuehguodhjfgge @^$($^%|!#   
 */
+
+WITH test
+AS
+ (
+  SELECT '120180101000' dt_wid, 10 sale FROM dual UNION ALL
+  SELECT '120180102000' dt_wid, 10 sale FROM dual UNION ALL
+  SELECT '120180103000' dt_wid, 10 sale FROM dual UNION ALL
+  SELECT '120180104000' dt_wid, 10 sale FROM dual UNION ALL
+  SELECT '120180105000' dt_wid, 10 sale FROM dual UNION ALL
+  SELECT '120180201000' dt_wid, 10 sale FROM dual UNION ALL
+  SELECT '120180202000' dt_wid, 10 sale FROM dual UNION ALL
+  SELECT '120180203000' dt_wid, 10 sale FROM dual UNION ALL
+  SELECT '120180204000' dt_wid, 10 sale FROM dual UNION ALL
+  SELECT '120180205000' dt_wid, 10 sale FROM dual
+  )
+SELECT
+     dt_wid,
+     SUM(sale) OVER (PARTITION BY to_number(SUBSTR(dt_wid,2,6)) ORDER BY dt_wid) sales
+ FROM test;
+ 
+ /*
+ DT_WID       SALES
+------------ -----
+120180101000    10
+120180102000    20
+120180103000    30
+120180104000    40
+120180105000    50
+120180201000    10
+120180202000    20
+120180203000    30
+120180204000    40
+120180205000    50
+*/
