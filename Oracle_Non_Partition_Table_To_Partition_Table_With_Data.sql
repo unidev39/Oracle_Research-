@@ -1,3 +1,21 @@
+--Converting a Non-Partitioned Table to a Partitioned Table
+
+A non-partitioned table can be converted to a partitioned table with a MODIFY clause added to the ALTER TABLE SQL statement.
+Using Oracle inviled package dbms_redefinition.can_redef_table,dbms_redefinition.start_redef_table and dbms_redefinition.finish_redef_table.
+
+The Oracle online table reorganization package, (dbms_redefinition) is used to reorganize tables while they are accepting updates.
+
+To solve the problem of doing table reorgs while the database accepts updates, Oracle9i has introduced Online Table Redefinitions 
+using the dbms_redefinition package.
+
+The dbms_redefinition package allows you to copy a table (using CTAS), create a snapshot on the 
+table, enqueue changes during the redefinition, and then re-synchronize the restructured table 
+with the changes that have accumulated during reorganization.
+
+1.dbms_redefinition.can_redef_table is stands for to check the staus of object structure.
+2.dbms_redefinition.start_redef_table is stands for starts the process.
+3.dbms_redefinition.finish_redef_table is stands for end the process.
+
 -- To drop the heap table permanently from database (If the object exists)
 DROP TABLE heap_table PURGE;
 
