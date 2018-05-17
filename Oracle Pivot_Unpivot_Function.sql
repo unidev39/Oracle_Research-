@@ -233,3 +233,53 @@ ID MODELID MODEL_EFFDDATE      MODEL_ENDDATE       COL_A COL_B
  2 100     21.05.2017 23:21:14 21.05.2017 23:21:14     2     2
  2 200     21.05.2017 23:21:14 21.05.2017 23:21:14     2     2
 */
+
+--Prior to 11g, we can get the same result using the DECODE function and a pivot table with the correct number of rows. 
+--In the following example we use the CONNECT BY clause in a query from dual to generate the correct number of rows for the unpivot operation.
+
+WITH unpivot_test_1
+AS
+(
+ SELECT 1 id, 101 customer_id, 10 prod_code_a, 20 prod_code_b, 30 prod_code_c, 40 prod_code_d FROM dual UNION ALL
+ SELECT 2 id, 102 customer_id, 10 prod_code_a, 20 prod_code_b, 30 prod_code_c, 40 prod_code_d FROM dual UNION ALL
+ SELECT 3 id, 103 customer_id, 10 prod_code_a, 20 prod_code_b, 30 prod_code_c, 40 prod_code_d FROM dual UNION ALL
+ SELECT 4 id, 104 customer_id, 10 prod_code_a, 20 prod_code_b, 30 prod_code_c, 40 prod_code_d FROM dual 
+)
+SELECT 
+     id,
+     customer_id,
+     DECODE(unpivot_row, 1, 'A',
+                         2, 'B',
+                         3, 'C',
+                         4, 'D',
+                         'N/A') AS prod_code,
+     DECODE(unpivot_row, 1, prod_code_a,
+                         2, prod_code_b,
+                         3, prod_code_c,
+                         4, prod_code_d,
+                         'N/A') AS quantity
+FROM
+     unpivot_test_1,
+    (SELECT LEVEL AS unpivot_row FROM dual CONNECT BY LEVEL <= 4)
+ORDER BY 1,2,3;
+
+/*
+ID CUSTOMER_ID PROD_CODE QUANTITY
+-- ----------- --------- --------
+ 1         101 A               10
+ 1         101 B               20
+ 1         101 C               30
+ 1         101 D               40
+ 2         102 A               10
+ 2         102 B               20
+ 2         102 C               30
+ 2         102 D               40
+ 3         103 A               10
+ 3         103 B               20
+ 3         103 C               30
+ 3         103 D               40
+ 4         104 A               10
+ 4         104 B               20
+ 4         104 C               30
+ 4         104 D               40
+*/
