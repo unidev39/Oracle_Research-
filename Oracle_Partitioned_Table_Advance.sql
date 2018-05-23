@@ -1497,3 +1497,1460 @@ DSHRIVASTAV LIST_PARTITIONED LIST_P2        'B', 'C'                    2 SHRIVA
 DSHRIVASTAV LIST_PARTITIONED LIST_P_NULLS   NULL                        3 TABLE_BACKUP            106496       16384 YES     DISABLED   
 DSHRIVASTAV LIST_PARTITIONED LIST_P_OTHERS  DEFAULT                     4 TABLE_BACKUP            106496       16384 YES     DISABLED   
 */
+
+Creating Composite Range-Range Partitioned Tables
+
+The range partitions of a range-range composite partitioned table are described as for non-composite range partitioned tables.
+This allows that optional subclauses of a PARTITION clause can specify physical and other attributes, including tablespace,
+specific to a partition segment. If not overridden at the partition level, partitions inherit the attributes of their underlying table.
+The range subpartition descriptions, in the SUBPARTITION clauses, are described as for non-composite range partitions, except the only
+physical attribute that can be specified is an optional tablespace. Subpartitions inherit all other physical attributes from
+the partition description.
+
+The following example illustrates how range-range partitioning might be used. The example tracks shipments.
+The service level agreement with the customer states that every order is delivered in the calendar month after the order was placed.
+The following types of orders are identified:
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE shipment_composite_partition PURGE;
+
+-- To Creating a Composite Range-Range Partitioned Tables table with subpartition name
+CREATE TABLE shipment_composite_partition
+(
+ order_id      NUMBER NOT NULL,
+ order_date    DATE NOT NULL,
+ delivery_date DATE NOT NULL,
+ customer_id   NUMBER NOT NULL,
+ sales_amount  NUMBER NOT NULL
+)
+PARTITION BY RANGE (order_date)
+SUBPARTITION BY RANGE (delivery_date)
+(
+ PARTITION p_2018_jan VALUES LESS THAN (TO_DATE('30-JAN-2018','dd-MON-yyyy'))
+  (SUBPARTITION sp_jan_1   VALUES LESS THAN (TO_DATE('01-JAN-2018','dd-MON-yyyy')),
+   SUBPARTITION sp_jan_2   VALUES LESS THAN (TO_DATE('20-JAN-2018','dd-MON-yyyy')),
+   SUBPARTITION sp_jan_max VALUES LESS THAN (MAXVALUE)),
+ PARTITION p_2018_feb VALUES LESS THAN (TO_DATE('28-FEB-2018','dd-MON-yyyy'))
+  (SUBPARTITION sp_feb_1   VALUES LESS THAN (TO_DATE('01-FEB-2018','dd-MON-yyyy')),
+   SUBPARTITION sp_feb_2   VALUES LESS THAN (TO_DATE('20-FEB-2018','dd-MON-yyyy')),
+   SUBPARTITION sp_feb_max VALUES LESS THAN (MAXVALUE)),
+ PARTITION p_2018_max VALUES LESS THAN (MAXVALUE)
+  (SUBPARTITION sp_mar_1 VALUES LESS THAN (TO_DATE('01-MAR-2018','dd-MON-yyyy')),
+   SUBPARTITION sp_mar_2 VALUES LESS THAN (TO_DATE('20-MAR-2018','dd-MON-yyyy')),
+   SUBPARTITION sp_max   VALUES LESS THAN (MAXVALUE))
+) TABLESPACE TABLE_BACKUP;
+
+-- Insert the data for Composite Range-Range Partitioned Tables
+INSERT INTO shipment_composite_partition
+SELECT 
+     LEVEL                               order_id,
+     SYSDATE-((30*LEVEL))                order_date,
+     SYSDATE-((30*LEVEL)+LEVEL)          delivery_date,
+     CEIL(dbms_random.VALUE(1,LEVEL))    customer_id,
+     CEIL(dbms_random.VALUE(1000,50000)) sales_amount 
+FROM dual
+CONNECT BY LEVEL <= 10;
+COMMIT;
+
+-- Inserted Data Varification --
+/*
+ORDER_ID ORDER_DATE          DELIVERY_DATE       CUSTOMER_ID SALES_AMOUNT
+-------- ------------------- ------------------- ----------- ------------
+       1 20.04.2018 23:08:17 19.04.2018 23:08:17           1        48541
+       2 21.03.2018 23:08:17 19.03.2018 23:08:17           2        15635
+       3 19.02.2018 23:08:17 16.02.2018 23:08:17           2        44930
+       4 20.01.2018 23:08:17 16.01.2018 23:08:17           2        22128
+       5 21.12.2017 23:08:17 16.12.2017 23:08:17           3        14398
+       6 21.11.2017 23:08:17 15.11.2017 23:08:17           3         5830
+       7 22.10.2017 23:08:17 15.10.2017 23:08:17           5        21165
+       8 22.09.2017 23:08:17 14.09.2017 23:08:17           3         9254
+       9 23.08.2017 23:08:17 14.08.2017 23:08:17           5        13961
+      10 24.07.2017 23:08:17 14.07.2017 23:08:17           6        12635
+*/
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'SHIPMENT_COMPOSITE_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+-- To show the object structure(for - partitions)
+SELECT
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'SHIPMENT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLE_NAME                   PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE
+---------------------------- -------------- ------------------ ------------------ --------------------------------------------------------------------------------------------                                                                         
+SHIPMENT_COMPOSITE_PARTITION P_2018_JAN                      3                  1        7 TO_DATE(' 2018-01-30 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_FEB                      3                  2        1 TO_DATE(' 2018-02-28 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_MAX                      3                  3        2 MAXVALUE                                                                           
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'SHIPMENT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLE_NAME                   PARTITION_NAME SUBPARTITION_NAME SUBPARTITION_POSITION HIGH_VALUE
+---------------------------- -------------- ----------------- --------------------- -----------------------------------------------------------------------------------                                                                         
+SHIPMENT_COMPOSITE_PARTITION P_2018_FEB     SP_FEB_1                              1 TO_DATE(' 2018-02-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_FEB     SP_FEB_2                              2 TO_DATE(' 2018-02-20 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_FEB     SP_FEB_MAX                            3 MAXVALUE                                                                           
+SHIPMENT_COMPOSITE_PARTITION P_2018_JAN     SP_JAN_1                              1 TO_DATE(' 2018-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_JAN     SP_JAN_2                              2 TO_DATE(' 2018-01-20 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_JAN     SP_JAN_MAX                            3 MAXVALUE                                                                           
+SHIPMENT_COMPOSITE_PARTITION P_2018_MAX     SP_MAR_1                              1 TO_DATE(' 2018-03-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_MAX     SP_MAR_2                              2 TO_DATE(' 2018-03-20 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_MAX     SP_MAX                                3 MAXVALUE                                                                           
+*/
+
+-- To identified the data relevant with partition and subpartition
+SELECT
+     'PARTITION    => p_2018_jan' partition_and_sub_name,
+     order_id,
+     order_date,
+     delivery_date,
+     customer_id,
+     sales_amount 
+FROM
+     dshrivastav.shipment_composite_partition PARTITION(p_2018_jan) 
+WHERE
+     order_id =4
+UNION ALL 
+SELECT
+     'SUBPARTITION => sp_jan_2' partition_and_sub_name,
+     order_id,
+     order_date,
+     delivery_date,
+     customer_id,
+     sales_amount 
+FROM
+     dshrivastav.shipment_composite_partition SUBPARTITION(sp_jan_2)
+WHERE
+     order_id =4;
+
+/*
+PARTITION_AND_SUB_NAME     ORDER_ID ORDER_DATE          DELIVERY_DATE       CUSTOMER_ID SALES_AMOUNT
+-------------------------- -------- ------------------- ------------------- ----------- ------------
+PARTITION    => p_2018_jan        4 20.01.2018 23:08:12 16.01.2018 23:08:12           2        14794
+SUBPARTITION => sp_jan_2          4 20.01.2018 23:08:12 16.01.2018 23:08:12           2        14794
+*/
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE shipment_composite_partition PURGE;
+
+-- To Creating a Composite Range-Range Partitioned Tables table withiout subpartition name (Wrong practice)
+CREATE TABLE shipment_composite_partition
+(
+ order_id      NUMBER NOT NULL,
+ order_date    DATE NOT NULL,
+ delivery_date DATE NOT NULL,
+ customer_id   NUMBER NOT NULL,
+ sales_amount  NUMBER NOT NULL
+)
+PARTITION BY RANGE (order_date)
+SUBPARTITION BY RANGE (delivery_date) 
+(
+ PARTITION p_2018_jan VALUES LESS THAN (TO_DATE('30-JAN-2018','dd-MON-yyyy')) TABLESPACE TABLE_BACKUP,
+ PARTITION p_2018_feb VALUES LESS THAN (TO_DATE('28-FEB-2018','dd-MON-yyyy')) TABLESPACE TABLE_BACKUP,
+ PARTITION p_2018_max VALUES LESS THAN (MAXVALUE) TABLESPACE TABLE_BACKUP
+)ENABLE ROW MOVEMENT;
+
+
+-- To show the object structure(for - partitions)
+SELECT
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     high_value
+
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'SHIPMENT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLE_NAME                   PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION HIGH_VALUE
+---------------------------- -------------- ------------------ ------------------ -----------------------------------------------------------------------------------                                                                         
+SHIPMENT_COMPOSITE_PARTITION P_2018_JAN                      1                  1 TO_DATE(' 2018-01-30 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_FEB                      1                  2 TO_DATE(' 2018-02-28 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+SHIPMENT_COMPOSITE_PARTITION P_2018_MAX                      1                  3 MAXVALUE                                                                           
+*/
+
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'SHIPMENT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLE_NAME                   PARTITION_NAME SUBPARTITION_NAME SUBPARTITION_POSITION HIGH_VALUE
+---------------------------- -------------- ----------------- --------------------- ----------
+SHIPMENT_COMPOSITE_PARTITION P_2018_FEB     SYS_SUBP103545                        1 MAXVALUE  
+SHIPMENT_COMPOSITE_PARTITION P_2018_JAN     SYS_SUBP103544                        1 MAXVALUE  
+SHIPMENT_COMPOSITE_PARTITION P_2018_MAX     SYS_SUBP103546                        1 MAXVALUE  
+*/
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE sales_partitioning PURGE;
+
+-- To Creating a Virtual column for the range-range-partitioned table with max values
+CREATE TABLE sales_partitioning
+( 
+  prod_id       NUMBER(6) NOT NULL,
+  cust_id       NUMBER NOT NULL,
+  time_id       DATE NOT NULL,
+  channel_id    CHAR(1) NOT NULL,
+  promo_id      NUMBER(6) NOT NULL,
+  quantity_sold NUMBER(3) NOT NULL,
+  amount_sold   NUMBER(10,2) NOT NULL,
+  total_amount  AS (quantity_sold * amount_sold)
+)
+PARTITION BY RANGE (time_id) 
+INTERVAL (NUMTOYMINTERVAL(1,'MONTH'))
+SUBPARTITION BY RANGE(total_amount)
+SUBPARTITION TEMPLATE
+( 
+ SUBPARTITION p_small   VALUES LESS THAN (1000)     TABLESPACE TABLE_BACKUP,
+ SUBPARTITION p_medium  VALUES LESS THAN (5000)     TABLESPACE TABLE_BACKUP,
+ SUBPARTITION p_large   VALUES LESS THAN (10000)    TABLESPACE TABLE_BACKUP,
+ SUBPARTITION p_extreme VALUES LESS THAN (MAXVALUE) TABLESPACE TABLE_BACKUP
+)
+(PARTITION sales_before_2018 VALUES LESS THAN (TO_DATE('01-JAN-2018','DD-MON-YYYY')) TABLESPACE TABLE_BACKUP
+)
+ENABLE ROW MOVEMENT
+PARALLEL NOLOGGING;
+
+-- To show the object structure(for - partitions)
+SELECT
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'SALES_PARTITIONING'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLE_NAME         PARTITION_NAME    SUBPARTITION_COUNT PARTITION_POSITION HIGH_VALUE                                                                         
+------------------ ----------------- ------------------ ------------------ -----------------------------------------------------------------------------------
+SALES_PARTITIONING SALES_BEFORE_2018                  4                  1 TO_DATE(' 2018-01-01 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'SALES_PARTITIONING'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLE_NAME         PARTITION_NAME    SUBPARTITION_NAME           SUBPARTITION_POSITION HIGH_VALUE
+------------------ ----------------- --------------------------- --------------------- ----------
+SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_SMALL                       1 1000      
+SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_MEDIUM                      2 5000      
+SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_LARGE                       3 10000     
+SALES_PARTITIONING SALES_BEFORE_2018 SALES_BEFORE_2018_P_EXTREME                     4 MAXVALUE  
+*/
+
+Creating Composite Range-Hash Partitioned Tables
+
+The partitions of a range-hash partitioned table are logical structures only, as their data is stored in the segments of
+their subpartitions. As with partitions, these subpartitions share the same logical attributes. Unlike range partitions 
+in a range-partitioned table, the subpartitions cannot have different physical attributes from the owning partition, 
+although they are not required to reside in the same tablespace.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE sales_composite_partition PURGE;
+
+-- To Creating a range-hash-partitioned table
+CREATE TABLE dshrivastav.sales_composite_partition
+(
+ prod_id       NUMBER(6),
+ cust_id       NUMBER,
+ time_id       DATE
+)
+PARTITION BY RANGE (time_id)
+SUBPARTITION BY HASH (cust_id)
+(
+ PARTITION p_2017_oct VALUES LESS THAN (TO_DATE('30-OCT-2017','dd-MON-yyyy'))
+ (SUBPARTITION sp_2017_oct),
+ PARTITION p_2017_dec VALUES LESS THAN (TO_DATE('30-DEC-2017','dd-MON-yyyy'))
+ (SUBPARTITION sp_2017_dec),
+ PARTITION p_max VALUES LESS THAN (MAXVALUE)
+  (SUBPARTITION sp_max)
+) TABLESPACE WAREHOUSE_DATABASE;
+
+-- Insert the data for Composite Range-Hash Partitioned Tables
+INSERT INTO dshrivastav.sales_composite_partition
+SELECT 
+     LEVEL                              prod_id,
+     Trunc(dbms_random.Value(100,1000)) cust_id,
+     SYSDATE-(30*LEVEL)                 time_date
+FROM 
+     dual
+CONNECT BY LEVEL <= 10;
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'SALES_COMPOSITE_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'SALES_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME                PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE                                                                         
+------------------ ------------------------- -------------- ------------------ ------------------ -------- -----------------------------------------------------------------------------------
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P_2017_OCT                      1                  1        4 TO_DATE(' 2017-10-30 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P_2017_DEC                      1                  2        2 TO_DATE(' 2017-12-30 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P_MAX                           1                  3        4 MAXVALUE                                                                           
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'SALES_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME                PARTITION_NAME SUBPARTITION_NAME SUBPARTITION_POSITION HIGH_VALUE
+------------------ ------------------------- -------------- ----------------- --------------------- ----------
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P_2017_DEC     SP_2017_DEC                           1           
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P_2017_OCT     SP_2017_OCT                           1           
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P_MAX          SP_MAX                                1           
+*/
+
+-- To identified the data relevant with partition and subpartition
+SELECT 'PARTITION    => p_2017_dec'  partition_and_sub_name, Count(*) row_count
+FROM dshrivastav.sales_composite_partition PARTITION(p_2017_dec) 
+UNION ALL 
+SELECT 'SUBPARTITION => sp_2017_dec' partition_and_sub_name, Count(*) row_count
+FROM dshrivastav.sales_composite_partition SUBPARTITION(sp_2017_dec)
+UNION ALL
+SELECT 'PARTITION    => p_2017_oct'  partition_and_sub_name, Count(*) row_count
+FROM dshrivastav.sales_composite_partition PARTITION(p_2017_oct) 
+UNION ALL 
+SELECT 'SUBPARTITION => sp_2017_oct' partition_and_sub_name, Count(*) row_count
+FROM dshrivastav.sales_composite_partition SUBPARTITION(sp_2017_oct)
+UNION ALL
+SELECT 'PARTITION    => p_max'       partition_and_sub_name, Count(*) row_count
+FROM dshrivastav.sales_composite_partition PARTITION(p_max) 
+UNION ALL 
+SELECT 'SUBPARTITION => sp_max'      partition_and_sub_name, Count(*) row_count
+FROM dshrivastav.sales_composite_partition SUBPARTITION(sp_max);
+
+/*
+PARTITION_AND_SUB_NAME      ROW_COUNT
+--------------------------- ---------
+PARTITION    => p_2017_dec          2
+SUBPARTITION => sp_2017_dec         2
+PARTITION    => p_2017_oct          4
+SUBPARTITION => sp_2017_oct         4
+PARTITION    => p_max               4
+SUBPARTITION => sp_max              4
+*/
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE sales_composite_partition PURGE;
+
+-- To Creating a range-hash-partitioned table using STORE IN clause
+CREATE TABLE dshrivastav.sales_composite_partition
+(
+ prod_id       NUMBER(6),
+ cust_id       NUMBER,
+ time_id       DATE
+)
+PARTITION BY RANGE (time_id)
+SUBPARTITION BY HASH (cust_id) SUBPARTITIONS 2 STORE IN (WAREHOUSE_DATABASE,WAREHOUSE_BIGFILE_DATABASE)
+(
+ PARTITION p_2017_oct VALUES LESS THAN (TO_DATE('30-OCT-2017','dd-MON-yyyy')),
+ PARTITION p_2017_dec VALUES LESS THAN (TO_DATE('30-DEC-2017','dd-MON-yyyy')),
+ PARTITION p_max VALUES LESS THAN (MAXVALUE)
+);
+
+-- Insert the data for Composite Range-Hash Partitioned Tables
+INSERT INTO dshrivastav.sales_composite_partition
+SELECT 
+     LEVEL                              prod_id,
+     Trunc(dbms_random.Value(100,1000)) cust_id,
+     SYSDATE-(30*LEVEL)                 time_date
+FROM 
+     dual
+CONNECT BY LEVEL <= 10;
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'SALES_COMPOSITE_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'SALES_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLESPACE_NAME            TABLE_NAME                PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE                                                                         
+-------------------------- ------------------------- -------------- ------------------ ------------------ -------- -----------------------------------------------------------------------------------
+WAREHOUSE_BIGFILE_DATABASE SALES_COMPOSITE_PARTITION P_2017_OCT                      2                  1        4 TO_DATE(' 2017-10-30 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+WAREHOUSE_BIGFILE_DATABASE SALES_COMPOSITE_PARTITION P_2017_DEC                      2                  2        2 TO_DATE(' 2017-12-30 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+WAREHOUSE_BIGFILE_DATABASE SALES_COMPOSITE_PARTITION P_MAX                           2                  3        4 MAXVALUE                                                                           
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'SALES_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLESPACE_NAME            TABLE_NAME                PARTITION_NAME SUBPARTITION_NAME SUBPARTITION_POSITION HIGH_VALUE
+-------------------------- ------------------------- -------------- ----------------- --------------------- ----------
+WAREHOUSE_DATABASE         SALES_COMPOSITE_PARTITION P_2017_DEC     SYS_SUBP103549                        1           
+WAREHOUSE_BIGFILE_DATABASE SALES_COMPOSITE_PARTITION P_2017_DEC     SYS_SUBP103550                        2           
+WAREHOUSE_DATABASE         SALES_COMPOSITE_PARTITION P_2017_OCT     SYS_SUBP103547                        1           
+WAREHOUSE_BIGFILE_DATABASE SALES_COMPOSITE_PARTITION P_2017_OCT     SYS_SUBP103548                        2           
+WAREHOUSE_DATABASE         SALES_COMPOSITE_PARTITION P_MAX          SYS_SUBP103551                        1           
+WAREHOUSE_BIGFILE_DATABASE SALES_COMPOSITE_PARTITION P_MAX          SYS_SUBP103552                        2           
+*/
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE sales_composite_partition PURGE;
+
+-- To Creating a range-hash-partitioned table using STORE IN clause
+CREATE TABLE dshrivastav.sales_composite_partition
+(
+ prod_id       NUMBER(6),
+ cust_id       NUMBER,
+ time_id       DATE
+)
+PARTITION BY RANGE (time_id)
+SUBPARTITION BY HASH (cust_id) SUBPARTITIONS 2 STORE IN (WAREHOUSE_DATABASE,WAREHOUSE_BIGFILE_DATABASE)
+(
+ PARTITION p_2017_oct VALUES LESS THAN (TO_DATE('30-OCT-2017','dd-MON-yyyy')),
+ PARTITION p_2017_dec VALUES LESS THAN (TO_DATE('30-DEC-2017','dd-MON-yyyy')),
+ PARTITION p_max VALUES LESS THAN (MAXVALUE) 
+ STORE IN (TABLE_BACKUP)  
+)
+TABLESPACE RETAIL_DATA;
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     high_value
+
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'SALES_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLESPACE_NAME TABLE_NAME                PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION HIGH_VALUE                                                                         
+--------------- ------------------------- -------------- ------------------ ------------------ -----------------------------------------------------------------------------------
+RETAIL_DATA     SALES_COMPOSITE_PARTITION P_2017_OCT                      2                  1 TO_DATE(' 2017-10-30 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+RETAIL_DATA     SALES_COMPOSITE_PARTITION P_2017_DEC                      2                  2 TO_DATE(' 2017-12-30 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+RETAIL_DATA     SALES_COMPOSITE_PARTITION P_MAX                           2                  3 MAXVALUE                                                                           
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'SALES_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLESPACE_NAME            TABLE_NAME                PARTITION_NAME SUBPARTITION_NAME SUBPARTITION_POSITION HIGH_VALUE
+-------------------------- ------------------------- -------------- ----------------- --------------------- ----------
+WAREHOUSE_DATABASE         SALES_COMPOSITE_PARTITION P_2017_DEC     SYS_SUBP103585                        1           
+WAREHOUSE_BIGFILE_DATABASE SALES_COMPOSITE_PARTITION P_2017_DEC     SYS_SUBP103586                        2           
+WAREHOUSE_DATABASE         SALES_COMPOSITE_PARTITION P_2017_OCT     SYS_SUBP103583                        1           
+WAREHOUSE_BIGFILE_DATABASE SALES_COMPOSITE_PARTITION P_2017_OCT     SYS_SUBP103584                        2           
+TABLE_BACKUP               SALES_COMPOSITE_PARTITION P_MAX          SYS_SUBP103587                        1           
+TABLE_BACKUP               SALES_COMPOSITE_PARTITION P_MAX          SYS_SUBP103588                        2           
+*/
+
+Creating Composite Range-List Partitioned Tables
+
+The range partitions of a range-list composite partitioned table are described as for non-composite range partitioned tables.
+This allows that optional subclauses of a PARTITION clause can specify physical and other attributes, including tablespace, specific
+to a partition segment. If not overridden at the partition level, partitions inherit the attributes of their underlying table.
+
+The list subpartition descriptions, in the SUBPARTITION clauses, are described as for non-composite list partitions, except the only
+physical attribute that can be specified is a tablespace (optional). Subpartitions inherit all other physical attributes from the
+partition description.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE dshrivastav.sales_composite_partition PURGE;
+
+-- To Creating a range-list-partitioned table
+CREATE TABLE dshrivastav.sales_composite_partition
+(
+ deptno     NUMBER,
+ item_no    VARCHAR2(30),
+ txn_date   DATE,
+ txn_amount NUMBER,
+ state      VARCHAR2(5)
+)
+TABLESPACE WAREHOUSE_DATABASE
+PARTITION BY RANGE (txn_date)
+SUBPARTITION BY LIST (state)
+(
+ PARTITION p1_2018 VALUES LESS THAN (TO_DATE('31-JAN-2018','DD-MON-YYYY'))
+ (SUBPARTITION sp1_2018_a_b VALUES ('A','B'),
+  SUBPARTITION sp1_2018_null VALUES (NULL),
+  SUBPARTITION sp1_2018_default VALUES (DEFAULT)),
+ PARTITION p_max VALUES LESS THAN (MAXVALUE)
+ (SUBPARTITION sp1_2018_max_null VALUES (NULL),
+  SUBPARTITION sp1_2018_max_default VALUES (DEFAULT))
+);
+
+-- Insert the data for Composite Range-List Partitioned Tables
+INSERT INTO dshrivastav.sales_composite_partition
+SELECT 
+     CEIL(dbms_random.Value(100,LEVEL))          deptno,
+     Trunc(dbms_random.Value(100,1000))          item_no,
+     TO_DATE('25-JAN-2018','DD-MON-YYYY')+LEVEL  txn_date,
+     50000                                       txn_amount,
+     CASE                                        
+        WHEN LEVEL = 1 THEN 'A'                  
+        WHEN LEVEL = 2 THEN 'B'                  
+     ELSE                                        
+        Chr(Trunc(dbms_random.Value(100,LEVEL))) 
+     END                                         state
+FROM dual
+CONNECT BY LEVEL <=10
+UNION ALL
+SELECT 1 deptno, 1 item_no,TO_DATE('30-JAN-2018','DD-MON-YYYY') txn_date,5000 txn_amount,NULL state FROM dual;
+COMMIT;
+
+SELECT * FROM dshrivastav.sales_composite_partition ;
+/*
+DEPTNO ITEM_NO TXN_DATE            TXN_AMOUNT STATE
+------ ------- ------------------- ---------- -----
+    87     632 26.01.2018 00:00:00      50000 A    
+    59     401 27.01.2018 00:00:00      50000 B    
+    90     499 28.01.2018 00:00:00      50000 b    
+    40     283 29.01.2018 00:00:00      50000 &    
+    63     706 30.01.2018 00:00:00      50000 C    
+    63     257 31.01.2018 00:00:00      50000 /    
+    56     667 01.02.2018 00:00:00      50000    
+    21     382 02.02.2018 00:00:00      50000 6    
+    76     790 03.02.2018 00:00:00      50000 A    
+    57     896 04.02.2018 00:00:00      50000 "    
+     1       1 30.01.2018 00:00:00       5000      
+*/
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'SALES_COMPOSITE_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'SALES_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME                PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE                                                                         
+------------------ ------------------------- -------------- ------------------ ------------------ -------- -----------------------------------------------------------------------------------
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P1_2018                         3                  1        6 TO_DATE(' 2018-01-31 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P_MAX                           2                  2        5 MAXVALUE                                                                           
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'SALES_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLESPACE_NAME    TABLE_NAME                PARTITION_NAME SUBPARTITION_NAME    SUBPARTITION_POSITION HIGH_VALUE
+------------------ ------------------------- -------------- -------------------- --------------------- ----------
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P1_2018        SP1_2018_A_B                             1 'A', 'B'  
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P1_2018        SP1_2018_NULL                            2 NULL      
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P1_2018        SP1_2018_DEFAULT                         3 DEFAULT   
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P_MAX          SP1_2018_MAX_NULL                        1 NULL      
+WAREHOUSE_DATABASE SALES_COMPOSITE_PARTITION P_MAX          SP1_2018_MAX_DEFAULT                     2 DEFAULT   
+*/
+
+SELECT * FROM dshrivastav.sales_composite_partition SUBPARTITION (sp1_2018_null);
+/*
+DEPTNO ITEM_NO TXN_DATE            TXN_AMOUNT STATE
+------ ------- ------------------- ---------- ----- 
+     1 1       30.01.2018 00:00:00       5000       
+*/
+
+Creating a Composite Hash-Hash Partitioned Table
+
+The table is created with composite hash-hash partitioning.
+For this example, the table has 2 hash partitions for department_id and each of those 2 partitions has 2 subpartitions for course_id.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE dshrivastav.dpt_composite_partition PURGE;
+
+-- To Creating a Hash-Hash-partitioned table with name
+CREATE TABLE dshrivastav.dpt_composite_partition
+(
+ department_id   NUMBER(4) NOT NULL,   
+ department_name VARCHAR2(30),  
+ course_id       NUMBER(4) NOT NULL
+)  
+PARTITION BY HASH(department_id)  
+SUBPARTITION BY HASH (course_id) 
+(
+ PARTITION p1_dpt
+ (SUBPARTITION sp1_dpt_1,
+  SUBPARTITION sp1_dpt_2),
+ PARTITION p2_dpt
+ (SUBPARTITION sp2_dpt_1,
+  SUBPARTITION sp2_dpt_2)
+) TABLESPACE WAREHOUSE_DATABASE;
+
+-- Insert the data for Composite Hash-Hash Partitioned Tables
+INSERT INTO dshrivastav.dpt_composite_partition
+SELECT 
+     CEIL(dbms_random.Value(100,LEVEL)) department_id,
+     LEVEL||'LIS'                       department_name,
+     Trunc(dbms_random.Value(10,555))   course_id
+FROM dual
+CONNECT BY LEVEL <=10 ;
+COMMIT;
+
+-- Inserted Data Varification --
+SELECT * FROM dshrivastav.dpt_composite_partition;
+/*
+DEPARTMENT_ID DEPARTMENT_NAME COURSE_ID
+------------- --------------- ---------
+           20 1LIS                  505
+           31 2LIS                  289
+           85 3LIS                  398
+           19 4LIS                  291
+           84 5LIS                   34
+           34 6LIS                  453
+            8 7LIS                  271
+           70 8LIS                  199
+           66 9LIS                  310
+           75 10LIS                 186
+*/
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'DPT_COMPOSITE_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'DPT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLESPACE_NAME    TABLE_NAME                PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE                                                                         
+------------------ ------------------------- -------------- ------------------ ------------------ -------- -----------------------------------------------------------------------------------
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT                          2                  1        4           
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P2_DPT                          2                  2        6           
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'DPT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLESPACE_NAME    TABLE_NAME                PARTITION_NAME SUBPARTITION_NAME    SUBPARTITION_POSITION HIGH_VALUE
+------------------ ------------------------- -------------- -------------------- --------------------- ----------
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT         SP1_DPT_1                             1           
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT         SP1_DPT_2                             2           
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P2_DPT         SP2_DPT_1                             1           
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P2_DPT         SP2_DPT_2                             2           
+*/
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE dshrivastav.dpt_composite_partition PURGE;
+
+-- To Creating a Hash-Hash-partitioned table without name
+CREATE TABLE dshrivastav.dpt_composite_partition
+(
+ department_id   NUMBER(4) NOT NULL,   
+ department_name VARCHAR2(30),  
+ course_id       NUMBER(4) NOT NULL
+)  
+PARTITION BY HASH(department_id)  
+SUBPARTITION BY HASH (course_id) SUBPARTITIONS 2 PARTITIONS 2
+STORE IN (WAREHOUSE_DATABASE,WAREHOUSE_BIGFILE_DATABASE);
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'DPT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME            TABLE_NAME              PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION
+-------------------------- ----------------------- -------------- ------------------ ------------------
+WAREHOUSE_BIGFILE_DATABASE DPT_COMPOSITE_PARTITION SYS_P103641                     2                  1
+WAREHOUSE_BIGFILE_DATABASE DPT_COMPOSITE_PARTITION SYS_P103642                     2                  2
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'DPT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME            TABLE_NAME              PARTITION_NAME SUBPARTITION_NAME SUBPARTITION_POSITION
+-------------------------- ----------------------- -------------- ----------------- ---------------------
+WAREHOUSE_DATABASE         DPT_COMPOSITE_PARTITION SYS_P103641    SYS_SUBP103637                        1
+WAREHOUSE_BIGFILE_DATABASE DPT_COMPOSITE_PARTITION SYS_P103641    SYS_SUBP103638                        2
+WAREHOUSE_DATABASE         DPT_COMPOSITE_PARTITION SYS_P103642    SYS_SUBP103639                        1
+WAREHOUSE_BIGFILE_DATABASE DPT_COMPOSITE_PARTITION SYS_P103642    SYS_SUBP103640                        2
+*/
+
+Creating a Composite Hash-Range Partitioned Table
+
+The table is created with composite hash-range partitioning.
+For this example, the table has 1 hash partitions for department_id and has 4 range subpartitions for effactivedate.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE dshrivastav.dpt_composite_partition PURGE;
+
+-- To Creating a Hash-Range-partitioned table
+CREATE TABLE dshrivastav.dpt_composite_partition
+(
+ department_id   NUMBER(4) NOT NULL,   
+ department_name VARCHAR2(30),  
+ effactivedate   DATE
+)  
+PARTITION BY HASH(department_id)  
+SUBPARTITION BY RANGE (effactivedate)
+(
+ PARTITION p1_dpt_2018
+ (
+  SUBPARTITION sp1_dpt_2018_1 VALUES LESS THAN (TO_DATE('31-JAN-2018','DD-MON-YYYY')),
+  SUBPARTITION sp1_dpt_2018_2 VALUES LESS THAN (TO_DATE('28-FEB-2018','DD-MON-YYYY')),
+  SUBPARTITION sp1_dpt_2018_3 VALUES LESS THAN (TO_DATE('31-MAR-2018','DD-MON-YYYY')),
+  SUBPARTITION sp1_dpt_2018_4 VALUES LESS THAN (MAXVALUE)
+ )
+) TABLESPACE WAREHOUSE_DATABASE;
+
+-- Insert the data for Composite Hash-Range Partitioned Tables
+INSERT INTO dshrivastav.dpt_composite_partition
+SELECT 
+     CEIL(dbms_random.Value(100,LEVEL)) department_id,
+     LEVEL||'YCO'                       department_name,
+     SYSDATE-(10*LEVEL)   effactivedate
+FROM dual
+CONNECT BY LEVEL <=10000 ;
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'DPT_COMPOSITE_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'DPT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME              PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE
+------------------ ----------------------- -------------- ------------------ ------------------ -------- ----------
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT_2018                     4                  1    10000           
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'DPT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME              PARTITION_NAME SUBPARTITION_NAME SUBPARTITION_POSITION HIGH_VALUE                                                                         
+------------------ ----------------------- -------------- ----------------- --------------------- -----------------------------------------------------------------------------------
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT_2018    SP1_DPT_2018_1                        1 TO_DATE(' 2018-01-31 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT_2018    SP1_DPT_2018_2                        2 TO_DATE(' 2018-02-28 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT_2018    SP1_DPT_2018_3                        3 TO_DATE(' 2018-03-31 00:00:00', 'SYYYY-MM-DD HH24:MI:SS', 'NLS_CALENDAR=GREGORIAN')
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT_2018    SP1_DPT_2018_4                        4 MAXVALUE                                                                           
+*/
+
+Creating a Composite Hash-List Partitioned Table
+
+The table is created with composite hash-list partitioning.
+For this example, the table has 1 hash partitions for department_id and has 3 list subpartitions for state.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE dshrivastav.dpt_composite_partition PURGE;
+
+-- To Creating a Hash-List-partitioned table
+CREATE TABLE dshrivastav.dpt_composite_partition
+(
+ department_id    NUMBER(4) NOT NULL,   
+ department_name  VARCHAR2(30),
+ state            VARCHAR2(5)
+)  
+PARTITION BY HASH(department_id)  
+SUBPARTITION BY LIST (state)
+(
+ PARTITION p1_dpt
+ (
+  SUBPARTITION sp1         VALUES ('A','B'),
+  SUBPARTITION sp1_null    VALUES (NULL),
+  SUBPARTITION sp1_default VALUES (DEFAULT)
+ )
+) TABLESPACE WAREHOUSE_DATABASE;
+
+-- Insert the data for Composite Hash-List Partitioned Tables
+INSERT INTO dshrivastav.dpt_composite_partition
+SELECT 
+     CEIL(dbms_random.Value(100,LEVEL)) department_id,
+     LEVEL||'YCO'                       department_name,
+     CASE                                        
+        WHEN LEVEL = 1 THEN 'A'                  
+        WHEN LEVEL = 2 THEN 'B'                  
+     ELSE                                        
+        Chr(Trunc(dbms_random.Value(100,LEVEL))) 
+     END                                         state
+FROM dual
+CONNECT BY LEVEL <=10000 ;
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'DPT_COMPOSITE_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'DPT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME              PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE
+------------------ ----------------------- -------------- ------------------ ------------------ -------- ----------
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT                          3                  1    10000           
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'DPT_COMPOSITE_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME              PARTITION_NAME SUBPARTITION_NAME SUBPARTITION_POSITION HIGH_VALUE                                                                         
+------------------ ----------------------- -------------- ----------------- --------------------- ----------
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT         SP1                                   1 'A', 'B'  
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT         SP1_NULL                              2 NULL      
+WAREHOUSE_DATABASE DPT_COMPOSITE_PARTITION P1_DPT         SP1_DEFAULT                           3 DEFAULT   
+*/
+
+Creating a Composite List-List Partitioned Table
+
+The table is created with composite List-List partitioning.
+The following example shows an accounts table that is list partitioned by col_1 and subpartitioned using list by col_2.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE dshrivastav.performance_composit_partition PURGE;
+
+-- To Creating a List-List-partitioned table
+CREATE TABLE dshrivastav.performance_composit_partition
+( 
+ id      NUMBER,
+ col_1   VARCHAR(5),
+ col_2   VARCHAR2(5)
+)
+PARTITION BY LIST (col_1)
+SUBPARTITION BY LIST (col_2)
+(
+ PARTITION p1_performance VALUES ('A','B','C')
+ (
+   SUBPARTITION sp1_bad     VALUES ('A1'),
+   SUBPARTITION sp1_average VALUES ('B2'),
+   SUBPARTITION sp1_good    VALUES ('C3')
+ ),
+ PARTITION p2_null VALUES (NULL)
+ (
+  SUBPARTITION sp2_null VALUES (NULL)
+ ),
+ PARTITION p3_all VALUES (DEFAULT)
+ (
+  SUBPARTITION sp3_all VALUES (DEFAULT)
+ )
+)TABLESPACE WAREHOUSE_DATABASE;
+
+-- Insert the data for Composite List-List Partitioned Tables
+INSERT INTO dshrivastav.performance_composit_partition
+SELECT 
+     LEVEL                                       id,
+     CASE                                        
+        WHEN LEVEL = 1 THEN 'A'                  
+        WHEN LEVEL = 2 THEN 'B'
+        WHEN LEVEL = 3 THEN 'C'                  
+     ELSE                                        
+        Chr(Trunc(dbms_random.Value(100,LEVEL))) 
+     END                                         col_1,
+     CASE                                        
+        WHEN LEVEL = 1 THEN 'A1'                 
+        WHEN LEVEL = 2 THEN 'B2'                 
+        WHEN LEVEL = 3 THEN 'C3'                 
+     ELSE                                        
+        Chr(Trunc(dbms_random.Value(100,LEVEL))) 
+     END                                         col_2
+FROM dual
+CONNECT BY LEVEL <=10 ;
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'PERFORMANCE_COMPOSIT_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'PERFORMANCE_COMPOSIT_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME                     PARTITION_NAME SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE
+------------------ ------------------------------ -------------- ------------------ ------------------ -------- -------------   
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P1_PERFORMANCE                  3                  1        3 'A', 'B', 'C'
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P2_NULL                         1                  2        0 NULL         
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P3_ALL                          1                  3        7 DEFAULT      
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'PERFORMANCE_COMPOSIT_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME                     PARTITION_NAME SUBPARTITION_NAME SUBPARTITION_POSITION HIGH_VALUE
+------------------ ------------------------------ -------------- ----------------- --------------------- ----------
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P1_PERFORMANCE SP1_BAD                               1 'A1'      
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P1_PERFORMANCE SP1_AVERAGE                           2 'B2'      
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P1_PERFORMANCE SP1_GOOD                              3 'C3'      
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P2_NULL        SP2_NULL                              1 NULL      
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P3_ALL         SP3_ALL                               1 DEFAULT   
+*/
+
+Creating a Composite List-Range Partitioned Table
+
+The table is created with composite List-List partitioning.
+The following example shows an accounts table that is list partitioned by col_1 and subpartitioned using range by percentage.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE dshrivastav.performance_composit_partition PURGE;
+
+-- To Creating a List-Range-partitioned table
+CREATE TABLE dshrivastav.performance_composit_partition
+( 
+ id           NUMBER,
+ col_1        VARCHAR(5),
+ percentage   VARCHAR2(5)
+)
+PARTITION BY LIST (col_1)
+SUBPARTITION BY RANGE (percentage)
+(
+ PARTITION p1_performance VALUES ('A','B','C')
+ (
+  SUBPARTITION sp1_percentage VALUES LESS THAN (80)
+ ),
+ PARTITION p2_percentage_null VALUES (NULL),
+ PARTITION p3_max_percentage  VALUES (DEFAULT)
+ (
+  SUBPARTITION sp3_max_percentage VALUES LESS THAN (MAXVALUE)
+ )
+)TABLESPACE WAREHOUSE_DATABASE;
+
+-- Insert the data for Composite List-Range Partitioned Tables
+INSERT INTO dshrivastav.performance_composit_partition
+SELECT 
+     LEVEL                                       id,
+     CASE                                        
+        WHEN LEVEL = 1 THEN 'A'                  
+        WHEN LEVEL = 2 THEN 'B'
+        WHEN LEVEL = 3 THEN 'C'                  
+     ELSE                                        
+        Chr(Trunc(dbms_random.Value(100,LEVEL))) 
+     END                                         col_1,
+     Trunc(dbms_random.Value(100,LEVEL))         percentage
+FROM dual
+CONNECT BY LEVEL <=10
+UNION ALL
+SELECT 11 id,NULL col_1,0 percentage FROM dual;
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'PERFORMANCE_COMPOSIT_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'PERFORMANCE_COMPOSIT_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME                     PARTITION_NAME     SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE
+------------------ ------------------------------ ------------------ ------------------ ------------------ -------- -------------   
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P1_PERFORMANCE                      1                  1        3 'A', 'B', 'C'
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P2_PERCENTAGE_NULL                  1                  2        1 NULL         
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P3_MAX_PERCENTAGE                   1                  3        7 DEFAULT      
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'PERFORMANCE_COMPOSIT_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+/*
+TABLESPACE_NAME    TABLE_NAME                     PARTITION_NAME     SUBPARTITION_NAME  SUBPARTITION_POSITION HIGH_VALUE
+------------------ ------------------------------ ------------------ ------------------ --------------------- ----------
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P1_PERFORMANCE     SP1_PERCENTAGE                         1 '80'      
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P2_PERCENTAGE_NULL SYS_SUBP103643                         1 MAXVALUE  
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P3_MAX_PERCENTAGE  SP3_MAX_PERCENTAGE                     1 MAXVALUE  
+*/
+-- In PARTITION
+SELECT * FROM dshrivastav.performance_composit_partition PARTITION (p2_percentage_null);
+/*
+ID COL_1  PERCENTAGE
+-- ------ ----------
+11        0         
+*/
+
+-- In SUBPARTITION (Auto Created)
+SELECT * FROM dshrivastav.performance_composit_partition SUBPARTITION (SYS_SUBP103643);
+/*
+ID COL_1  PERCENTAGE
+-- ------ ----------
+11        0         
+*/
+
+Creating a Composite List-Hash Partitioned Table
+
+The table is created with composite List-Hash partitioning.
+The following example shows an accounts table that is list partitioned by col_1 and subpartitioned using hash by percentage.
+
+-- To drop permanently from database (If the object exists)
+DROP TABLE dshrivastav.performance_composit_partition PURGE;
+
+-- To Creating a List-Hash-partitioned table
+CREATE TABLE dshrivastav.performance_composit_partition
+( 
+ id           NUMBER,
+ col_1        VARCHAR(5),
+ percentage   VARCHAR2(5)
+)
+PARTITION BY LIST (col_1)
+SUBPARTITION BY HASH (percentage) SUBPARTITIONS 2
+(
+ PARTITION p1_performance     VALUES ('A','B','C'),
+ PARTITION p2_percentage_null VALUES (NULL),
+ PARTITION p3_max_percentage  VALUES (DEFAULT)
+)TABLESPACE WAREHOUSE_DATABASE;
+
+-- Insert the data for Composite List-hash Partitioned Tables
+INSERT INTO dshrivastav.performance_composit_partition
+SELECT 
+     LEVEL                                       id,
+     CASE                                        
+        WHEN LEVEL = 1 THEN 'A'                  
+        WHEN LEVEL = 2 THEN 'B'
+        WHEN LEVEL = 3 THEN 'C'                  
+     ELSE                                        
+        Chr(Trunc(dbms_random.Value(100,LEVEL))) 
+     END                                         col_1,
+     Trunc(dbms_random.Value(100,LEVEL))         percentage
+FROM dual
+CONNECT BY LEVEL <=10
+UNION ALL
+SELECT 11 id,NULL col_1,0 percentage FROM dual;
+COMMIT;
+
+-- To gather the object
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'DSHRIVASTAV',
+     tabname          => 'PERFORMANCE_COMPOSIT_PARTITION', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 2, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- To show the object structure(for - partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_count,
+     partition_position,
+     num_rows,
+     high_value
+FROM 
+     all_tab_partitions
+WHERE 
+    table_name  = 'PERFORMANCE_COMPOSIT_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME                     PARTITION_NAME     SUBPARTITION_COUNT PARTITION_POSITION NUM_ROWS HIGH_VALUE
+------------------ ------------------------------ ------------------ ------------------ ------------------ -------- -------------   
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P1_PERFORMANCE                      2                  1        3 'A', 'B', 'C'
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P2_PERCENTAGE_NULL                  2                  2        1 NULL         
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P3_MAX_PERCENTAGE                   2                  3        7 DEFAULT      
+*/
+
+-- To show the object structure(for - sub-partitions)
+SELECT
+     tablespace_name,
+     table_name,
+     partition_name,
+     subpartition_name,
+     subpartition_position,
+     high_value
+FROM 
+     all_tab_subpartitions
+WHERE 
+    table_name  = 'PERFORMANCE_COMPOSIT_PARTITION'
+AND table_owner = 'DSHRIVASTAV';
+
+/*
+TABLESPACE_NAME    TABLE_NAME                     PARTITION_NAME     SUBPARTITION_NAME SUBPARTITION_POSITION HIGH_VALUE
+------------------ ------------------------------ ------------------ ----------------- --------------------- ----------
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P1_PERFORMANCE     SYS_SUBP103644                        1           
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P1_PERFORMANCE     SYS_SUBP103645                        2           
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P2_PERCENTAGE_NULL SYS_SUBP103646                        1           
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P2_PERCENTAGE_NULL SYS_SUBP103647                        2           
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P3_MAX_PERCENTAGE  SYS_SUBP103648                        1           
+WAREHOUSE_DATABASE PERFORMANCE_COMPOSIT_PARTITION P3_MAX_PERCENTAGE  SYS_SUBP103649                        2           
+*/
+
+-- In PARTITION - for null
+SELECT * FROM dshrivastav.performance_composit_partition PARTITION (p2_percentage_null);
+/*
+ID COL_1  PERCENTAGE
+-- ------ ----------
+11        0         
+*/
+
+-- In SUBPARTITION (Auto Created)
+SELECT * FROM dshrivastav.performance_composit_partition SUBPARTITION (sys_subp103647);
+/*
+ID COL_1  PERCENTAGE
+-- ------ ----------
+11        0         
+*/
+
+-- For data
+SELECT 'PARTITION      => p1_performance' partition_name, ID, COL_1, PERCENTAGE
+FROM dshrivastav.performance_composit_partition PARTITION (p1_performance)
+UNION ALL
+SELECT 'SUBPARTITION   => sys_subp103644' partition_name, ID, COL_1, PERCENTAGE
+FROM dshrivastav.performance_composit_partition SUBPARTITION (sys_subp103644)
+UNION ALL
+SELECT 'SUBPARTITION   => sys_subp103645' partition_name, ID, COL_1, PERCENTAGE
+FROM dshrivastav.performance_composit_partition SUBPARTITION (sys_subp103645);
+
+/*
+PARTITION_NAME                   ID COL_1 PERCENTAGE
+-------------------------------- -- ----- ----------
+PARTITION      => p1_performance  1 A     27        
+PARTITION      => p1_performance  3 C     62        
+PARTITION      => p1_performance  2 B     94        
+SUBPARTITION   => sys_subp103644  1 A     27        
+SUBPARTITION   => sys_subp103644  3 C     62        
+SUBPARTITION   => sys_subp103645  2 B     94        
+*/
