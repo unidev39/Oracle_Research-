@@ -853,3 +853,45 @@ BEGIN
 END;
 /
 
+DECLARE
+  -- Associative array indexed by string:
+  TYPE population IS TABLE OF NUMBER INDEX BY VARCHAR2(64);
+  -- Associative array variable 
+  city_population  population;
+  i                VARCHAR2(64);
+BEGIN
+  -- Add new elements to associative array:
+  city_population('ktm-A')  := 50000000;
+  city_population('ktm-B')  := 60000000;
+  city_population('ktm-C')  := 70000000;
+  
+  -- Print associative array:
+  i := city_population.FIRST;
+  WHILE i IS NOT NULL LOOP
+    dbms_output.put_line('Population of '||i||' is ' ||TO_CHAR(city_population(i)));
+    i := city_population.NEXT(i);
+  END LOOP;
+END;
+/
+
+
+DECLARE 
+   CURSOR c_population 
+   IS 
+   SELECT 'ktm-A' city FROM dual UNION ALL 
+   SELECT 'ktm-B' city FROM dual UNION ALL 
+   SELECT 'ktm-C' city FROM dual;
+    
+   type population is varray (6) of VARCHAR2(50); 
+   city_population population := population(); 
+   counter NUMBER :=0; 
+BEGIN 
+   FOR i IN c_population
+   LOOP 
+      counter := counter + 1; 
+      city_population.extend; 
+      city_population(counter)  := i.city; 
+      dbms_output.put_line('Population of ('||counter||'):'||city_population(counter)); 
+   END LOOP; 
+END; 
+/ 
