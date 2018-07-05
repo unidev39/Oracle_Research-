@@ -31,7 +31,7 @@
        Using Multicolumn Partitioning Keys
        Using Default Partition
        Using NULL Partition
-       Using ENABLE ROW MOVEMENT
+       Using ENABLE ROW MOVEMENT 
 12.Composite Partitioning (DEFAULT/TABLESPACE/STORE IN)
    • Composite Range-Range Partitioning.
    • Composite Range-Hash Partitioning.
