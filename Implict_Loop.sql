@@ -1083,3 +1083,38 @@ BEGIN
     end loop;
 end;
 /
+					  
+CREATE TABLE test_commit (c1 NUMBER);
+DECLARE 
+     l_commit_after   NUMBER := 5;
+     l_commit_counter NUMBER := 0;
+BEGIN 
+     FOR i IN 1 .. 10
+     LOOP
+        INSERT INTO test_commit (c1) VALUES (i);
+
+        l_commit_counter := l_commit_counter + SQL%ROWCOUNT;
+        IF l_commit_counter >= l_commit_after THEN
+           Dbms_Output.Put_Line(l_commit_counter||' => '||l_commit_after||' =>Commit Test Pass');
+           l_commit_counter := 1;
+        END IF;
+        Dbms_Output.Put_Line(l_commit_counter||' => Commit');
+    END LOOP;
+    COMMIT;
+END;
+/
+
+/*
+1 => Commit                    
+2 => Commit                    
+3 => Commit                    
+4 => Commit                    
+5 => 5 =>Commit Test Pass      
+1 => Commit                    
+2 => Commit                    
+3 => Commit                    
+4 => Commit                    
+5 => 5 =>Commit Test Pass      
+1 => Commit                    
+2 => Commit
+*/   
