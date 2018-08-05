@@ -125,6 +125,79 @@ ALTER TABLE hr.employees DISABLE TABLE LOCK;
 ALTER TABLE hr.employees ENABLE TABLE LOCK;
 LOCK TABLE hr.employees IN EXCLUSIVE MODE WAIT 6000;
 
+-- STEP 1:  To identify the SID for the table with the lock, you will use this system ID in a later query to get the serial number for the table row lock:
+select 
+   session_id
+from 
+   dba_dml_locks
+where 
+   name = 'EMP';
+
+Output :
+SID
+___
+607
+
+-- STEP 2:  The next step is a script to find the Serial# for the table row lock :
+select 
+   sid,
+   serial#
+from 
+   v$session
+where 
+   sid in (
+   select 
+      session_id
+   from 
+      dba_dml_locks
+   where 
+      name = 'EMP');
+
+Output :
+
+SID SERIAL#
+---- -------
+607 1402
+
+--STEP 3:  Finally, we can use the "alter system" command to kill the session that is holding the table lock:
+alter system kill session 'SID,SERIALl#';
+alter system kill session '607,1402';
+
+-- enq: TX - row lock contention
+select
+    sid,
+    sql_text 
+from
+    v$session s,
+    v$sql q 
+where
+    sid in
+    (select
+       sid
+    from
+       v$session
+   where
+       state in ('WAITING')
+   and
+       wait_class != 'Idle'
+   and 
+       event='enq: TX - row lock contention'
+   and 
+      (q.sql_id = s.sql_id or q.sql_id = s.prev_sql_id));
+
+-- The blocking session is:
+select
+    blocking_session,
+    sid,    serial#,
+    wait_class,
+    seconds_in_wait 
+from
+    v$session 
+where
+    blocking_session is not NULL
+order by
+    blocking_session;
+    
 -- To find the query process time
 SELECT 
      a.* 
