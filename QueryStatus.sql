@@ -462,6 +462,25 @@ JOB_NAME     STATUS    ERROR#
 JOB_NAME_ANY SUCCEEDED 0
 
 */
+-- To find the maximum hit query
+SELECT DISTINCT 
+'BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => '''||OWNER||''',
+     tabname          => '''||OBJECT_NAME||''', 
+     estimate_percent => 70,
+     cascade          => TRUE,
+     degree           => 8, 
+     method_opt       =>''FOR ALL COLUMNS SIZE AUTO''
+    );
+END;
+/' AS GATHER_STATS
+FROM GV$SEGMENT_STATISTICS 
+WHERE OBJECT_TYPE='TABLE' 
+AND TABLESPACE_NAME NOT IN ('SYS','SYSTEM','SYSAUX') 
+AND Lower(STATISTIC_NAME) LIKE '%write%' 
+AND Value > 10;
 
 -- To Drop Scheduler Jobs
 BEGIN
