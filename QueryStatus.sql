@@ -382,6 +382,36 @@ WHERE
      a.owner = USER
 AND  a.table_name = 'EMPLOYEES'; 
 
+SELECT COUNT(*),event FROM gv$session WHERE username IS NOT NULL AND username!='SYS' GROUP BY event;
+
+SELECT 
+      event
+     ,inst_id
+     ,sid
+     ,serial#
+     ,sql_id
+     ,schemaname
+     ,osuser
+     ,status
+     ,program
+     ,module
+FROM gv$session 
+WHERE username IS NOT NULL AND username!='SYS' 
+AND event IN ('read by other session') 
+ORDER BY 2,6;
+
+SELECT
+     a.sql_text,
+     a.inst_id,
+     a.first_load_time,
+     a.elapsed_time,
+     a.executions
+     --,a.elapsed_time/executions  averagetime
+FROM 
+     gv$sqlarea a
+WHERE 
+     (a.inst_id,a.sql_id) IN (('2','7w2zj3cm3k50t'));
+
 
 --To required degree for a table used while gather stats 
 SELECT
