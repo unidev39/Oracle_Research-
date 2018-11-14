@@ -601,3 +601,5 @@ expdp scott/tiger@db10g schemas=SCOTT exclude=TABLE:"= 'BONUS'" directory=TEST_D
 expdp test/test@db10g tables=SCOTT.EMP network_link=REMOTE_SCOTT directory=TEST_DIR dumpfile=EMP.dmp logfile=expdpEMP.log
 8. 
 expdp sys/oracle DIRECTORY=pm_data_dump DUMPFILE=pm_tables_exp_071411.dmp SCHEMAS=hr INCLUDE=TABLE:\"like \'PM%\'\" INCLUDE=SEQUENCE:\"like\'PM%\'\" INCLUDE=PROCEDURE logfile=pm_tables_exp_071411.log
+9.
+expdp sys/oracle tables=FCGO.REG_DETAILS_20750726 directory=AXCISE_DUMP file=REG_DETAILS_20750726.dmp logfile=REG_DETAILS_20750728.Log ;
