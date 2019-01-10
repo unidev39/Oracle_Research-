@@ -280,7 +280,7 @@ FROM
 WHERE 
      first_name IN ('JONES','BLAKE','SCOTT','KING','FORD');
 
---SELECT all records WHERE first_name starts with ‘S’ and its lenth is 6 char.
+--SELECT all records WHERE first_name starts with â€˜Sâ€™ and its lenth is 6 char.
 SELECT 
      * 
 FROM 
@@ -288,7 +288,7 @@ FROM
 WHERE 
      first_name like'S____';
 
---SELECT all records WHERE first_name may be any no of  character but it should end with ‘R’.
+--SELECT all records WHERE first_name may be any no of  character but it should end with â€˜Râ€™.
 SELECT 
      * 
 FROM 
@@ -401,3 +401,11 @@ FROM
 GROUP BY 
      department_id
 HAVING COUNT(employee_id) > 2;
+
+-- To Generate Token from Oracle
+SELECT 
+     Dbms_Random.string('U',10) string_a,
+     Dbms_Random.string('L',10) string_l,
+     Dbms_Random.string('P',10) string_p,
+     Dbms_Random.string('X',10) string_x
+FROM dual;
