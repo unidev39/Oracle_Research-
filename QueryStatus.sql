@@ -603,3 +603,39 @@ expdp test/test@db10g tables=SCOTT.EMP network_link=REMOTE_SCOTT directory=TEST_
 expdp sys/oracle DIRECTORY=pm_data_dump DUMPFILE=pm_tables_exp_071411.dmp SCHEMAS=hr INCLUDE=TABLE:\"like \'PM%\'\" INCLUDE=SEQUENCE:\"like\'PM%\'\" INCLUDE=PROCEDURE logfile=pm_tables_exp_071411.log
 9.
 expdp sys/oracle tables=FCGO.REG_DETAILS_20750726 directory=AXCISE_DUMP file=REG_DETAILS_20750726.dmp logfile=REG_DETAILS_20750728.Log ;
+                                         
+-- To find the BLOB/LOB size
+SELECT
+   b.table_name, 
+   b.column_name, 
+   b.segment_name,  
+   a.bytes/(1024*1024*1024) table_size_gb
+FROM 
+   dba_segments a JOIN dba_lobs b
+ON (a.owner = b.owner AND a.segment_name=b.segment_name) 
+WHERE 
+   b.table_name IN ('DCTB_REQ_DOC_DO3','ITB_REQ_DOC_DO3_DBL');
+
+SELECT owner,table_name,column_name,data_type FROM dba_tab_cols 
+WHERE table_name IN ('DCTB_REQ_DOC_DO3','ITB_REQ_DOC_DO3_DBL') 
+AND data_type ='BLOB';
+/*
+OWNER TABLE_NAME          COLUMN_NAME  DATA_TYPE
+----- ------------------- ------------ ---------
+ITAX  DCTB_REQ_DOC_DO3    FILE_CONTAIN BLOB     
+ITAX  ITB_REQ_DOC_DO3_DBL FILE_CONTAIN BLOB     
+*/
+
+SELECT ROUND(SUM(DBMS_LOB.GETLENGTH(file_contain)/(1024*1024*1024)),2) bytes_in_gb FROM itax.dctb_req_doc_do3;
+/*
+BYTES_IN_GB
+-----------
+      91.06
+*/
+
+SELECT ROUND(SUM(DBMS_LOB.GETLENGTH(file_contain)/(1024*1024*1024)),2) bytes_in_gb FROM itax.itb_req_doc_do3_dbl;
+/*
+BYTES_IN_GB
+-----------
+    2226.85
+*/
