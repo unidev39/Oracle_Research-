@@ -602,11 +602,11 @@ expdp test/test@db10g tables=SCOTT.EMP network_link=REMOTE_SCOTT directory=TEST_
 8. 
 expdp sys/oracle DIRECTORY=pm_data_dump DUMPFILE=pm_tables_exp_071411.dmp SCHEMAS=hr INCLUDE=TABLE:\"like \'PM%\'\" INCLUDE=SEQUENCE:\"like\'PM%\'\" INCLUDE=PROCEDURE logfile=pm_tables_exp_071411.log
 9.
-expdp sys/oracle tables=FCGO.REG_DETAILS_20750726 directory=AXCISE_DUMP file=REG_DETAILS_20750726.dmp logfile=REG_DETAILS_20750728.Log ;
+expdp sys/oracle tables=HR.TEST directory=DIR_DUMP file=TEST.dmp logfile=TEST.Log ;
 10.
-expdp sys/oracle schemas=DCENTRAL include=table:\"IN \(\'DCTB_SW_DOCUMENT_FILE\', \'DCTB_BUSINESS_PERSONNELS\', \'DITB_REQ_DOC_AA\', \'DCTB_AC_DOCUMENTS\', \'DCTB_INDIVIDUAL_DETAILS\', \'DCTB_DOCUMENTS\', \'DITB_BALANCE_SHEET\', \'ITB_REQ_DOC_DO3_TMP\', \'DCTB_APPEAL_DOCUMENTS\', \'TEST_SHRINK\', \'QUEST_SL_TEMP_EXPLAIN1\', \'DCTB_APPEAL_INCL_DOCUMENTS\', \'DCTB_DOCUMENTS_AA\' \)\" directory=prod_dump dumpfile=dcentral_only_include_13lob_28012019.dmp logfile=dcentral_only_include_13lob_28012019.log ;
+expdp sys/oracle schemas=TEST include=table:\"IN \(\'TEST1\', \'TEST2\' \'TEST3\' \)\" directory=TEST dumpfile=TEST.dmp logfile=TEST.log ;
 11.
-expdp sys/oracle schemas=DCENTRAL exclude=table:\"IN \(\'DCTB_SW_DOCUMENT_FILE\', \'DCTB_BUSINESS_PERSONNELS\', \'DITB_REQ_DOC_AA\', \'DCTB_REQ_DOC_DO3\', \'DCTB_AC_DOCUMENTS\', \'DCTB_INDIVIDUAL_DETAILS\', \'DCTB_DOCUMENTS\', \'DITB_BALANCE_SHEET\', \'ITB_REQ_DOC_DO3_TMP\', \'DCTB_APPEAL_DOCUMENTS\', \'TEST_SHRINK\', \'QUEST_SL_TEMP_EXPLAIN1\', \'DCTB_APPEAL_INCL_DOCUMENTS\', \'DCTB_DOCUMENTS_AA\' \)\" directory=prod_dump dumpfile=decentral_all_exclude_lob_24012019.dmp logfile=decentral_all_exclude_lob_24012019.log ;
+expdp sys/oracle schemas=TEST exclude=table:\"IN \(\'TEST1', 'TEST2' \)\" directory=TEST dumpfile=TEST.dmp logfile=TEST.log ;
 
 -- To find the BLOB/LOB size
 SELECT
@@ -618,26 +618,20 @@ FROM
    dba_segments a JOIN dba_lobs b
 ON (a.owner = b.owner AND a.segment_name=b.segment_name) 
 WHERE 
-   b.table_name IN ('DCTB_REQ_DOC_DO3','ITB_REQ_DOC_DO3_DBL');
+   b.table_name IN ('TEST2','TEST');
 
 SELECT owner,table_name,column_name,data_type FROM dba_tab_cols 
-WHERE table_name IN ('DCTB_REQ_DOC_DO3','ITB_REQ_DOC_DO3_DBL') 
+WHERE table_name IN ('TEST','TEST1') 
 AND data_type ='BLOB';
-/*
-OWNER TABLE_NAME          COLUMN_NAME  DATA_TYPE
------ ------------------- ------------ ---------
-ITAX  DCTB_REQ_DOC_DO3    FILE_CONTAIN BLOB     
-ITAX  ITB_REQ_DOC_DO3_DBL FILE_CONTAIN BLOB     
-*/
 
-SELECT ROUND(SUM(DBMS_LOB.GETLENGTH(file_contain)/(1024*1024*1024)),2) bytes_in_gb FROM itax.dctb_req_doc_do3;
+SELECT ROUND(SUM(DBMS_LOB.GETLENGTH(file_contain)/(1024*1024*1024)),2) bytes_in_gb FROM TEST;
 /*
 BYTES_IN_GB
 -----------
       91.06
 */
 
-SELECT ROUND(SUM(DBMS_LOB.GETLENGTH(file_contain)/(1024*1024*1024)),2) bytes_in_gb FROM itax.itb_req_doc_do3_dbl;
+SELECT ROUND(SUM(DBMS_LOB.GETLENGTH(file_contain)/(1024*1024*1024)),2) bytes_in_gb FROM TEST;
 /*
 BYTES_IN_GB
 -----------
