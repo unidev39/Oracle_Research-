@@ -877,3 +877,16 @@ BEGIN
     END IF;
 END tr_inv_log;
 /
+
+/*
+SELECT * FROM extracts.inv_log;
+SELECT * FROM extracts.invoice_data;
+
+SELECT owner,job_name,start_date,enabled, state FROM dba_scheduler_jobs a
+WHERE a.owner = 'EXTRACTS'
+AND  UPPER(a.job_name) = 'SENDEXTRACT';
+
+SELECT job_name,status,error#, destination, additional_info FROM dba_scheduler_job_run_details a
+WHERE a.owner = 'EXTRACTS'
+AND UPPER(a.job_name) = 'SENDEXTRACT';
+*/
