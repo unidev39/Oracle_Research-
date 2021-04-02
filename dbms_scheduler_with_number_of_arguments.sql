@@ -1,4 +1,234 @@
 ------------------------------------------------------------
+-----------------Source Database Server---------------------
+------------------------------------------------------------
+ServerHost   => 192.168.1.63
+TcpPort      => 1521
+InstanceSid  => orcl
+
+-- The Process Log Table
+DROP TABLE extracts.inv_log purge;
+CREATE TABLE extracts.inv_log
+(
+ sn              NUMBER,
+ fiscalyear      VARCHAR2(100),
+ fromdate        VARCHAR2(20),
+ todate          VARCHAR2(20),
+ filename        VARCHAR2(100),
+ filerowcount    NUMBER,
+ status          VARCHAR2(10),
+ errmsg          VARCHAR2(4000),
+ CONSTRAINT primary_key_sn PRIMARY KEY (sn)
+)
+TABLESPACE tbs_extracts;
+
+-- Unique Sequence For Each Process
+DROP SEQUENCE extracts.sq_sn_inv_log;
+CREATE SEQUENCE extracts.sq_sn_inv_log;
+
+-- To Create Current table
+DROP TABLE extracts.invoice_data purge;
+CREATE TABLE extracts.invoice_data (
+  fiscal_yr             VARCHAR2(20),
+  cir_number            VARCHAR2(25),
+  subject_name          VARCHAR2(500),
+  request_id            VARCHAR2(25),
+  product_id            VARCHAR2(25),
+  product_type_id       VARCHAR2(225),
+  no_of_product         VARCHAR2(25),
+  charge_amount         VARCHAR2(25),
+  user_type             VARCHAR2(25),
+  user_code             VARCHAR2(30),
+  bank_code             VARCHAR2(25),
+  branch_code           VARCHAR2(25),
+  activity_date_bs      VARCHAR2(25),
+  activity_date_ad      DATE
+)
+  TABLESPACE tbs_extracts
+;
+
+-- Import Directory
+DROP DIRECTORY dir_extracts;
+CREATE OR REPLACE DIRECTORY dir_extracts AS '/home/oracle/extracts/';
+GRANT READ,WRITE ON DIRECTORY dir_extracts TO PUBLIC;
+
+-- To Create external table
+DROP TABLE extracts.tmp_invoice_data purge;
+CREATE TABLE extracts.tmp_invoice_data (
+  fiscal_yr             VARCHAR2(4000),
+  cir_number            VARCHAR2(4000),
+  subject_name          VARCHAR2(4000),
+  request_id            VARCHAR2(4000),
+  product_id            VARCHAR2(4000),
+  product_type_id       VARCHAR2(4000),
+  no_of_product         VARCHAR2(4000),
+  charge_amount         VARCHAR2(4000),
+  user_type             VARCHAR2(4000),
+  user_code             VARCHAR2(4000),
+  bank_code             VARCHAR2(4000),
+  branch_code           VARCHAR2(4000),
+  activity_date_bs      VARCHAR2(4000),
+  activity_date_ad      DATE
+)
+ORGANIZATION external
+(
+  TYPE ORACLE_LOADER
+  DEFAULT DIRECTORY DIR_EXTRACTS
+  ACCESS PARAMETERS
+  (
+    RECORDS DELIMITED BY NEWLINE CHARACTERSET US7ASCII
+    SKIP 1
+    READSIZE 1048576
+    FIELDS TERMINATED BY '|' 
+    OPTIONALLY ENCLOSED BY '"' LDRTRIM
+    REJECT ROWS WITH ALL NULL FIELDS
+  )
+  LOCATION ('XXX_XX-XX-XXXX_XX-XX-XXXX.txt')
+)
+REJECT LIMIT UNLIMITED;
+
+-- To Populate the Source Table
+INSERT INTO extracts.invoice_data
+SELECT 
+     TRIM(fiscal_yr)                                  fiscal_yr,
+     TRIM(cir_number)                                 cir_number,
+     REGEXP_REPLACE(TRIM(subject_name),'( ){2,}',' ') subject_name,
+     TRIM(request_id)                                 request_id,
+     TRIM(product_id)                                 product_id,
+     TRIM(product_type_id)                            product_type_id,
+     TRIM(no_of_product)                              no_of_product,
+     TRIM(charge_amount)                              charge_amount,
+     TRIM(user_type)                                  user_type,
+     TRIM(user_code)                                  user_code,
+     TRIM(bank_code)                                  bank_code,
+     TRIM(branch_code)                                branch_code,
+     TRIM(activity_date_bs)                           activity_date_bs,
+     activity_date_ad                                 activity_date_ad
+FROM extracts.tmp_invoice_data;
+COMMIT;
+
+-- To Drop the External Table
+DROP TABLE extracts.tmp_invoice_data PURGE;
+
+-- Collect the Gather Stats
+BEGIN
+    dbms_stats.gather_table_stats
+    (
+     ownname          => 'EXTRACTS',
+     tabname          => 'INVOICE_DATA', 
+     estimate_percent => 100,
+     cascade          => TRUE,
+     degree           => 8, 
+     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
+    );
+END;
+/
+
+-- Trigger to Call The Shell Script with Parameters
+CREATE OR REPLACE TRIGGER extracts.tr_inv_log
+AFTER INSERT ON extracts.inv_log
+REFERENCING NEW AS NEW OLD AS OLD
+FOR EACH ROW
+DECLARE
+     l_source_filename   VARCHAR2(100);
+     l_source_path       VARCHAR2(100);
+     l_dest_user         VARCHAR2(100);
+     l_dest_ip           VARCHAR2(100);
+     l_dest_path         VARCHAR2(100);
+     l_dest_password     VARCHAR2(100);
+     l_db_directory_name VARCHAR2(100);
+     l_db_password       VARCHAR2(100);
+     l_sh_job            VARCHAR2(100);
+     l_filerowcount      NUMBER;
+     l_sql               VARCHAR2(32767) := '';
+     l_filename_n        VARCHAR2(100);
+     l_filerowcount_n    NUMBER;
+     PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    IF INSERTING THEN
+        l_filename_n := :new.filename;
+        l_filerowcount_n := :new.filerowcount;
+
+        IF (:new.status = 'SUCCEEDED' AND :new.errmsg IS NULL) THEN
+           l_sql := 'SELECT '''||l_filename_n||'''                           source_filename,
+                            ''/home/oracle/extracts''                        source_path,
+                            ''root''                                         dest_user,
+                            ''192.168.129.1''                                dest_ip,
+                            ''/home/oracle/extracts''                        dest_path,
+                            ''2ksKl@26B''                                    dest_password,
+		            '''||l_filerowcount_n||'''                       filerowcount,
+                            ''DIR_EXTRACTS|webapp''                          db_directory_name,
+                            ''W5b#ApPL!c1t90N''                              db_password,
+                            ''/home/oracle/extracts/script/send_extract.sh'' sh_job
+                     FROM dual';
+
+           EXECUTE IMMEDIATE (l_sql) INTO l_source_filename, l_source_path, l_dest_user, l_dest_ip, l_dest_path, l_dest_password, l_filerowcount, l_db_directory_name, l_db_password, l_sh_job;
+
+           BEGIN
+               FOR i IN 1..2
+               LOOP
+                  BEGIN
+                      -- To Stop a Job
+                      BEGIN
+                          DBMS_SCHEDULER.STOP_JOB(job_name=>'EXTRACTS.SENDEXTRACT', force=>true);
+                      EXCEPTION WHEN OTHERS THEN
+                          NULL;
+                      END;
+
+                      -- To Drop a Job
+                      BEGIN
+                          DBMS_SCHEDULER.DROP_JOB ('EXTRACTS.SENDEXTRACT');
+                      EXCEPTION WHEN OTHERS THEN
+                          NULL;
+                      END;
+
+                      -- To Empty the Logs
+                      BEGIN
+                          DBMS_SCHEDULER.PURGE_LOG(JOB_NAME => 'EXTRACTS.SENDEXTRACT');
+                      EXCEPTION WHEN OTHERS THEN
+                          NULL;
+                      END;
+      	          END;
+
+                  -- To Call a Job
+                  BEGIN
+                      DBMS_SCHEDULER.CREATE_JOB(
+                        job_name             => 'SENDEXTRACT',
+                        job_type             => 'EXECUTABLE',
+                        number_of_arguments  => 9,
+                        job_action           => l_sh_job,
+                        auto_drop            => false);
+                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',1,l_source_filename);
+                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',2,l_source_path);
+                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',3,l_dest_user);
+                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',4,l_dest_ip);
+                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',5,l_dest_path);
+                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',6,l_dest_password);
+                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',7,''||l_filerowcount||'');
+                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',8,l_db_directory_name);
+                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',9,l_db_password);
+                      DBMS_SCHEDULER.ENABLE('SENDEXTRACT');
+                  END;
+               END LOOP;
+           END;
+        END IF;
+    END IF;
+END tr_inv_log;
+/
+
+/*
+SELECT * FROM extracts.inv_log;
+SELECT * FROM extracts.invoice_data;
+
+SELECT owner,job_name,start_date,enabled, state FROM dba_scheduler_jobs a
+WHERE a.owner = 'EXTRACTS'
+AND  UPPER(a.job_name) = 'SENDEXTRACT';
+
+SELECT job_name,status,error#, destination, additional_info FROM dba_scheduler_job_run_details a
+WHERE a.owner = 'EXTRACTS'
+AND UPPER(a.job_name) = 'SENDEXTRACT';
+*/
+
+------------------------------------------------------------
 -------------------Dest Database Server---------------------
 ------------------------------------------------------------
 ServerHost   => 192.168.129.1
@@ -647,7 +877,7 @@ EXECUTE pkg_inv.sp_delete_history_data;
 EXECUTE pkg_inv.sp_inv_bustup;
 EXECUTE webapp.pkg_inv.sp_call_extract('2077/78','ALL','All','All','01-11-2021','31-11-2021');
 EXECUTE webapp.pkg_inv.sp_refresh_status_extract('2077/78','ALL','All','All','01-11-2021','31-11-2021');
-EXECUTE webapp.pkg_inv.sp_dump_extract('IVC_01-11-2021_31-11-2021.txt',463663,'DIR_EXTRACTS');
+EXECUTE webapp.pkg_inv.sp_dump_extract('XXX_XX-XX-XXXX_XX-XX-XXXX.txt',XXXXX,'DIR_EXTRACTS');
 
 SELECT * FROM webapp.inv_log;
 SELECT * FROM webapp.inv_event_error;
@@ -659,234 +889,4 @@ AND  UPPER(a.job_name) = 'CALLEXTRACT';
 SELECT job_name,status,error#, destination, additional_info FROM dba_scheduler_job_run_details a
 WHERE a.owner = 'WEBAPP'
 AND UPPER(a.job_name) = 'CALLEXTRACT';
-*/
-
-------------------------------------------------------------
------------------Source Database Server---------------------
-------------------------------------------------------------
-ServerHost   => 192.168.1.63
-TcpPort      => 1521
-InstanceSid  => orcl
-
--- The Process Log Table
-DROP TABLE extracts.inv_log purge;
-CREATE TABLE extracts.inv_log
-(
- sn              NUMBER,
- fiscalyear      VARCHAR2(100),
- fromdate        VARCHAR2(20),
- todate          VARCHAR2(20),
- filename        VARCHAR2(100),
- filerowcount    NUMBER,
- status          VARCHAR2(10),
- errmsg          VARCHAR2(4000),
- CONSTRAINT primary_key_sn PRIMARY KEY (sn)
-)
-TABLESPACE tbs_extracts;
-
--- Unique Sequence For Each Process
-DROP SEQUENCE extracts.sq_sn_inv_log;
-CREATE SEQUENCE extracts.sq_sn_inv_log;
-
--- To Create Current table
-DROP TABLE extracts.invoice_data purge;
-CREATE TABLE extracts.invoice_data (
-  fiscal_yr             VARCHAR2(20),
-  cir_number            VARCHAR2(25),
-  subject_name          VARCHAR2(500),
-  request_id            VARCHAR2(25),
-  product_id            VARCHAR2(25),
-  product_type_id       VARCHAR2(225),
-  no_of_product         VARCHAR2(25),
-  charge_amount         VARCHAR2(25),
-  user_type             VARCHAR2(25),
-  user_code             VARCHAR2(30),
-  bank_code             VARCHAR2(25),
-  branch_code           VARCHAR2(25),
-  activity_date_bs      VARCHAR2(25),
-  activity_date_ad      DATE
-)
-  TABLESPACE tbs_extracts
-;
-
--- Import Directory
-DROP DIRECTORY dir_extracts;
-CREATE OR REPLACE DIRECTORY dir_extracts AS '/home/oracle/extracts/';
-GRANT READ,WRITE ON DIRECTORY dir_extracts TO PUBLIC;
-
--- To Create external table
-DROP TABLE extracts.tmp_invoice_data purge;
-CREATE TABLE extracts.tmp_invoice_data (
-  fiscal_yr             VARCHAR2(4000),
-  cir_number            VARCHAR2(4000),
-  subject_name          VARCHAR2(4000),
-  request_id            VARCHAR2(4000),
-  product_id            VARCHAR2(4000),
-  product_type_id       VARCHAR2(4000),
-  no_of_product         VARCHAR2(4000),
-  charge_amount         VARCHAR2(4000),
-  user_type             VARCHAR2(4000),
-  user_code             VARCHAR2(4000),
-  bank_code             VARCHAR2(4000),
-  branch_code           VARCHAR2(4000),
-  activity_date_bs      VARCHAR2(4000),
-  activity_date_ad      DATE
-)
-ORGANIZATION external
-(
-  TYPE ORACLE_LOADER
-  DEFAULT DIRECTORY DIR_EXTRACTS
-  ACCESS PARAMETERS
-  (
-    RECORDS DELIMITED BY NEWLINE CHARACTERSET US7ASCII
-    SKIP 1
-    READSIZE 1048576
-    FIELDS TERMINATED BY '|' 
-    OPTIONALLY ENCLOSED BY '"' LDRTRIM
-    REJECT ROWS WITH ALL NULL FIELDS
-  )
-  LOCATION ('INVOICE_1474_2077-09-01_1583.TXT')
-)
-REJECT LIMIT UNLIMITED;
-
--- To Populate the Source Table
-INSERT INTO extracts.invoice_data
-SELECT 
-     TRIM(fiscal_yr)                                  fiscal_yr,
-     TRIM(cir_number)                                 cir_number,
-     REGEXP_REPLACE(TRIM(subject_name),'( ){2,}',' ') subject_name,
-     TRIM(request_id)                                 request_id,
-     TRIM(product_id)                                 product_id,
-     TRIM(product_type_id)                            product_type_id,
-     TRIM(no_of_product)                              no_of_product,
-     TRIM(charge_amount)                              charge_amount,
-     TRIM(user_type)                                  user_type,
-     TRIM(user_code)                                  user_code,
-     TRIM(bank_code)                                  bank_code,
-     TRIM(branch_code)                                branch_code,
-     TRIM(activity_date_bs)                           activity_date_bs,
-     activity_date_ad                                 activity_date_ad
-FROM extracts.tmp_invoice_data;
-COMMIT;
-
--- To Drop the External Table
-DROP TABLE extracts.tmp_invoice_data PURGE;
-
--- Collect the Gather Stats
-BEGIN
-    dbms_stats.gather_table_stats
-    (
-     ownname          => 'EXTRACTS',
-     tabname          => 'INVOICE_DATA', 
-     estimate_percent => 100,
-     cascade          => TRUE,
-     degree           => 8, 
-     method_opt       =>'FOR ALL COLUMNS SIZE AUTO'
-    );
-END;
-/
-
--- Trigger to Call The Shell Script with Parameters
-CREATE OR REPLACE TRIGGER extracts.tr_inv_log
-AFTER INSERT ON extracts.inv_log
-REFERENCING NEW AS NEW OLD AS OLD
-FOR EACH ROW
-DECLARE
-     l_source_filename   VARCHAR2(100);
-     l_source_path       VARCHAR2(100);
-     l_dest_user         VARCHAR2(100);
-     l_dest_ip           VARCHAR2(100);
-     l_dest_path         VARCHAR2(100);
-     l_dest_password     VARCHAR2(100);
-     l_db_directory_name VARCHAR2(100);
-     l_db_password       VARCHAR2(100);
-     l_sh_job            VARCHAR2(100);
-     l_filerowcount      NUMBER;
-     l_sql               VARCHAR2(32767) := '';
-     l_filename_n        VARCHAR2(100);
-     l_filerowcount_n    NUMBER;
-     PRAGMA AUTONOMOUS_TRANSACTION;
-BEGIN
-    IF INSERTING THEN
-        l_filename_n := :new.filename;
-        l_filerowcount_n := :new.filerowcount;
-
-        IF (:new.status = 'SUCCEEDED' AND :new.errmsg IS NULL) THEN
-           l_sql := 'SELECT '''||l_filename_n||'''                           source_filename,
-                            ''/home/oracle/extracts''                        source_path,
-                            ''root''                                         dest_user,
-                            ''192.168.129.1''                                dest_ip,
-                            ''/home/oracle/extracts''                        dest_path,
-                            ''2ksKl@26B''                                    dest_password,
-		      			    '''||l_filerowcount_n||'''                       filerowcount,
-                            ''DIR_EXTRACTS|webapp''                          db_directory_name,
-                            ''W5b#ApPL!c1t90N''                              db_password,
-                            ''/home/oracle/extracts/script/send_extract.sh'' sh_job
-                     FROM dual';
-
-           EXECUTE IMMEDIATE (l_sql) INTO l_source_filename, l_source_path, l_dest_user, l_dest_ip, l_dest_path, l_dest_password, l_filerowcount, l_db_directory_name, l_db_password, l_sh_job;
-
-           BEGIN
-               FOR i IN 1..2
-               LOOP
-                  BEGIN
-                      -- To Stop a Job
-                      BEGIN
-                          DBMS_SCHEDULER.STOP_JOB(job_name=>'EXTRACTS.SENDEXTRACT', force=>true);
-                      EXCEPTION WHEN OTHERS THEN
-                          NULL;
-                      END;
-
-                      -- To Drop a Job
-                      BEGIN
-                          DBMS_SCHEDULER.DROP_JOB ('EXTRACTS.SENDEXTRACT');
-                      EXCEPTION WHEN OTHERS THEN
-                          NULL;
-                      END;
-
-                      -- To Empty the Logs
-                      BEGIN
-                          DBMS_SCHEDULER.PURGE_LOG(JOB_NAME => 'EXTRACTS.SENDEXTRACT');
-                      EXCEPTION WHEN OTHERS THEN
-                          NULL;
-                      END;
-      	          END;
-
-                  -- To Call a Job
-                  BEGIN
-                      DBMS_SCHEDULER.CREATE_JOB(
-                        job_name             => 'SENDEXTRACT',
-                        job_type             => 'EXECUTABLE',
-                        number_of_arguments  => 9,
-                        job_action           => l_sh_job,
-                        auto_drop            => false);
-                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',1,l_source_filename);
-                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',2,l_source_path);
-                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',3,l_dest_user);
-                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',4,l_dest_ip);
-                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',5,l_dest_path);
-                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',6,l_dest_password);
-                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',7,''||l_filerowcount||'');
-                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',8,l_db_directory_name);
-                      DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',9,l_db_password);
-                      DBMS_SCHEDULER.ENABLE('SENDEXTRACT');
-                  END;
-               END LOOP;
-           END;
-        END IF;
-    END IF;
-END tr_inv_log;
-/
-
-/*
-SELECT * FROM extracts.inv_log;
-SELECT * FROM extracts.invoice_data;
-
-SELECT owner,job_name,start_date,enabled, state FROM dba_scheduler_jobs a
-WHERE a.owner = 'EXTRACTS'
-AND  UPPER(a.job_name) = 'SENDEXTRACT';
-
-SELECT job_name,status,error#, destination, additional_info FROM dba_scheduler_job_run_details a
-WHERE a.owner = 'EXTRACTS'
-AND UPPER(a.job_name) = 'SENDEXTRACT';
 */
