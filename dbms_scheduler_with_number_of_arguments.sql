@@ -164,8 +164,8 @@ BEGIN
            EXECUTE IMMEDIATE (l_sql) INTO l_source_filename, l_source_path, l_dest_user, l_dest_ip, l_dest_path, l_dest_password, l_filerowcount, l_db_directory_name, l_db_password, l_sh_job;
 
            BEGIN
-               FOR i IN 1..2
-               LOOP
+             --FOR i IN 1..2
+             --LOOP
                   BEGIN
                       -- To Stop a Job
                       BEGIN
@@ -208,7 +208,7 @@ BEGIN
                       DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE('SENDEXTRACT',9,l_db_password);
                       DBMS_SCHEDULER.ENABLE('SENDEXTRACT');
                   END;
-               END LOOP;
+             --END LOOP;
            END;
         END IF;
     END IF;
