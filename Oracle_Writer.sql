@@ -334,3 +334,268 @@ EXCEPTION WHEN NO_DATA_FOUND THEN
     utl_file.fclose(l_inhandler);
 END;
 /
+
+
+-- Preapre a Insert Scripts While Data Migaration From Oracle to Rest DB
+BEGIN
+    FOR i IN (SELECT 
+                  table_name,
+                  owner
+              FROM all_tables
+              WHERE owner='NSHPL'
+              AND table_name IN ('ACCOUNT_BALANCE','BANK_PARAMETER')
+              ORDER BY table_name)
+    LOOP
+       BEGIN 
+           DECLARE
+               p_woner        VARCHAR2(30) := i.owner;
+               p_table_name   VARCHAR2(30) := i.table_name; 
+               l_query        VARCHAR2(32767);
+               l_table_name   VARCHAR2(32767);
+           BEGIN 
+               SELECT        
+                    ''''||Lower(a.query1)||'''' query,
+                    table_name
+                    INTO l_query,l_table_name
+               FROM (
+               SELECT 
+                   Count(*) sn,
+                   TABLE_NAME,
+                   listagg(CASE WHEN DATA_TYPE='DATE' THEN DATE_COLUMN_NAME ELSE NULL_COLUMN_NAME END,',') WITHIN GROUP(ORDER BY TABLE_NAME,COLUMN_ID) query1
+               FROM (
+                     SELECT 
+                          TABLE_NAME,
+                          COLUMN_NAME,
+                          COLUMN_ID,
+                          DATA_TYPE,                                                     
+                          '''''''||CASE WHEN '||column_name||' IS NULL THEN ''NULL'' ELSE ''to_date(''''''||TO_CHAR('||column_name||'~''YYYY-MM-DD'')||'''''',''''YYYY-MM-DD'''')' ||''' END'||'||''''''' date_column_name,
+                          '''''''||CASE WHEN '||COLUMN_NAME||' IS NULL THEN ''NULL'' ELSE REPLACE(TO_CHAR('||COLUMN_NAME||'),'''''''','''''''''''') END'||'||'''''''    null_column_name
+                     FROM all_tab_cols
+                     WHERE owner = p_woner
+                     AND table_name = p_table_name
+                    )
+               GROUP BY TABLE_NAME
+               ORDER BY TABLE_NAME) a;
+           
+               l_query := REPLACE(Lower(l_query),'~',',');
+               DECLARE
+                    l_inhandler     utl_file.file_type;
+                    l_outhandle     VARCHAR2(32767);
+                    TYPE cursor_rc  IS REF cursor;
+                    l_cursor        cursor_rc;
+                    l_sql           VARCHAR2(32767);
+                    l_column_date   VARCHAR2(32767);
+               BEGIN
+                    l_inhandler := utl_file.fopen('DIR_NAME',l_table_name||'.sql','W');
+                    l_sql := 'SELECT REPLACE(REPLACE(REPLACE('||l_query||',''''''null'''''',''NULL''),''''''to_date'',''to_date''),'''''')'''''','''''')'') column_date FROM '||p_woner||'.'||l_table_name;
+                    Dbms_Output.Put_Line(l_sql);
+                    
+                    OPEN l_cursor FOR l_sql;
+                    LOOP
+                       FETCH l_cursor INTO l_column_date;
+                       EXIT WHEN l_cursor%NOTFOUND;
+                       utl_file.put_line(l_inhandler,'INSERT INTO '||p_woner||'.'||l_table_name||' VALUES ('||l_column_date||')');
+                    END LOOP;
+                    close l_cursor;
+                    
+               EXCEPTION WHEN NO_DATA_FOUND THEN
+                    utl_file.fclose(l_inhandler);
+               END;
+           END;
+       EXCEPTION WHEN OTHERS THEN 
+          Dbms_Output.Put_Line(i.table_name);
+       END;
+    END LOOP;
+EXCEPTION WHEN OTHERS THEN 
+    Dbms_Output.Put_Line(SQLERRM);
+END;
+/
+
+---------
+BEGIN
+    FOR i IN (SELECT 
+                  table_name,
+                  owner
+              FROM all_tables
+              WHERE owner='NSHPL'
+              AND table_name IN ('ACCOUNT_BALANCE','BANK_PARAMETER','BILL','BILL_DETAIL','BRANCH_PERMISSIONS','BROKER_PARAMETER','BUY_SETTLEMENT','CALENDAR_PARAMETER','CAPITAL_GAIN_DETAIL','CAPITAL_GAIN_PARA','CHART_OF_ACCOUNT','COMMISSION','COMMISSION_RATE','COMPANY_PARAMETER','COMPANY_PARAMETER_LIST','COST_CENTER','COUNTRY','COUNTRY_DETAIL','CUSTOMER_CHILD_INFO','CUSTOMER_LEDGER','CUSTOMER_REGISTRATION','CUSTOMER_REGISTRATION_DETAIL','DAILY_CERTIFICATE','DAILY_TRANSACTION','DAILY_TRANSACTION_NO','DISTRICT_PARA','FILE_LOCATION','FISCAL_YEAR_PARA','GROUP_PARAMETER','LEDGER','PAYOUT_UPLOAD','RECEIPT_PAYMENT_DETAIL','RECEIPT_PAYMENT_SLIP','REFERRED_CUSTOMER_INFO',	'SECTOR_PARAMETER','SHARE_PARAMETER','SYSTEM_PARA','TAX_PARA','VOUCHER','VOUCHER_DETAIL','VOUCHER_PARTICULARS','VOUCHER_TRANSACTION')
+              ORDER BY table_name)
+    LOOP
+        DECLARE 
+             l_max_column_id NUMBER;
+        BEGIN 
+            SELECT 
+                 MAX(column_id) INTO l_max_column_id 
+            FROM all_tab_cols
+            WHERE owner = i.owner
+            AND table_name = i.table_name;
+            
+            IF (l_max_column_id >30 AND l_max_column_id <=60) THEN 
+               BEGIN 
+                  DECLARE
+                      p_woner        VARCHAR2(30) := i.owner;
+                      p_table_name   VARCHAR2(30) := i.table_name; 
+                      l_query        VARCHAR2(32767);
+                      l_query_next   VARCHAR2(32767);
+                      l_table_name   VARCHAR2(32767);
+                  BEGIN
+                      SELECT
+                           query,query_next,table_name
+                           INTO l_query,l_query_next,l_table_name
+                      FROM 
+                          (
+                           SELECT 
+                                query, 
+                                LEAD(query,1) OVER (ORDER BY column_id) AS query_next,
+                                table_name
+                           FROM ( 
+                                 SELECT
+                                      column_id,        
+                                      ''''||LOWER(a.query1)||'''' query,
+                                      table_name                
+                                 FROM (
+                                       SELECT 
+                                           Count(*) sn,
+                                           table_name,
+                                           30 column_id,
+                                           LISTAGG(CASE WHEN data_type='DATE' THEN date_column_name ELSE null_column_name END,',') WITHIN GROUP(ORDER BY table_name,column_id) query1
+                                       FROM (
+                                             SELECT 
+                                                  table_name,
+                                                  column_name,
+                                                  column_id,
+                                                  data_type,
+                                                  '''''''||CASE WHEN '||column_name||' IS NULL THEN ''NULL'' ELSE ''to_date(''''''||TO_CHAR('||column_name||'~''YYYY-MM-DD'')||'''''',''''YYYY-MM-DD'''')' ||''' END'||'||''''''' date_column_name,
+                                                  '''''''||CASE WHEN '||column_name||' IS NULL THEN ''NULL'' ELSE REPLACE(TO_CHAR('||column_name||'),'''''''','''''''''''') END'||'||'''''''    null_column_name
+                                             FROM all_tab_cols
+                                             WHERE owner = p_woner
+                                             AND table_name = p_table_name
+                                             AND column_id <=30
+                                             ORDER BY column_id
+                                            )
+                                       GROUP BY table_name
+                                       UNION
+                                       SELECT 
+                                           Count(*) sn,
+                                           table_name,
+                                           31 column_id,
+                                           LISTAGG(CASE WHEN data_type='DATE' THEN date_column_name ELSE null_column_name END,',') WITHIN GROUP(ORDER BY table_name,column_id) query1
+                                       FROM (
+                                             SELECT 
+                                                  table_name,
+                                                  column_name,
+                                                  column_id,
+                                                  data_type,
+                                                  '''''''||CASE WHEN '||column_name||' IS NULL THEN ''NULL'' ELSE ''to_date(''''''||TO_CHAR('||column_name||'~''YYYY-MM-DD'')||'''''',''''YYYY-MM-DD'''')' ||''' END'||'||''''''' date_column_name, 
+                                                  '''''''||CASE WHEN '||column_name||' IS NULL THEN ''NULL'' ELSE REPLACE(TO_CHAR('||column_name||'),'''''''','''''''''''') END'||'||'''''''    null_column_name
+                                             FROM all_tab_cols
+                                             WHERE owner = p_woner
+                                             AND table_name = p_table_name
+                                             AND column_id >31
+                                             ORDER BY column_id
+                                            )
+                                       GROUP BY table_name
+                                 ) a ORDER BY table_name
+                              ) b 
+                      ) c
+                      WHERE query_next IS NOT NULL;
+
+                      l_query := REPLACE(Lower(l_query),'~',',');
+                      l_query_next := REPLACE(Lower(l_query_next),'~',',');
+                      DECLARE
+                           l_inhandler     utl_file.file_type;
+                           l_outhandle     VARCHAR2(32767);
+                           TYPE cursor_rc  IS REF cursor;
+                           l_cursor        cursor_rc;
+                           l_sql           VARCHAR2(32767);
+                           l_column_date   VARCHAR2(32767);
+                      BEGIN
+                           l_inhandler := utl_file.fopen('DIR_NAME',l_table_name||'.sql','W');                                             
+                           l_sql := 'SELECT REPLACE(REPLACE(REPLACE('||l_query||',''''''null'''''',''NULL''),''''''to_date'',''to_date''),'''''')'''''','''''')'')||'',''||REPLACE(REPLACE(REPLACE('||l_query_next||',''''''null'''''',''NULL''),''''''to_date'',''to_date''),'''''')'''''','''''')'') column_date FROM '||p_woner||'.'||l_table_name;
+                           --Dbms_Output.Put_Line(l_sql); 
+                                                     
+                           OPEN l_cursor FOR l_sql;
+                           LOOP
+                              FETCH l_cursor INTO l_column_date;
+                              EXIT WHEN l_cursor%NOTFOUND;
+                              utl_file.put_line(l_inhandler,'INSERT INTO '||p_woner||'.'||l_table_name||' VALUES ('||l_column_date||')');
+                           END LOOP;
+                           close l_cursor;
+                           
+                      EXCEPTION WHEN NO_DATA_FOUND THEN
+                           utl_file.fclose(l_inhandler);
+                      END;
+                END;
+               EXCEPTION WHEN OTHERS THEN 
+                  Dbms_Output.Put_Line(i.table_name);
+               END;
+            ELSE
+               BEGIN 
+                   DECLARE
+                       p_woner        VARCHAR2(30) := i.owner;
+                       p_table_name   VARCHAR2(30) := i.table_name; 
+                       l_query        VARCHAR2(32767);
+                       l_table_name   VARCHAR2(32767);
+                   BEGIN 
+                       SELECT        
+                            ''''||Lower(a.query1)||'''' query,
+                            table_name
+                            INTO l_query,l_table_name
+                       FROM (
+                       SELECT 
+                           Count(*) sn,
+                           TABLE_NAME,
+                           listagg(CASE WHEN DATA_TYPE='DATE' THEN DATE_COLUMN_NAME ELSE NULL_COLUMN_NAME END,',') WITHIN GROUP(ORDER BY TABLE_NAME,COLUMN_ID) query1
+                       FROM (
+                             SELECT 
+                                  TABLE_NAME,
+                                  COLUMN_NAME,
+                                  COLUMN_ID,
+                                  DATA_TYPE,                                                     
+                                  '''''''||CASE WHEN '||column_name||' IS NULL THEN ''NULL'' ELSE ''to_date(''''''||TO_CHAR('||column_name||'~''YYYY-MM-DD'')||'''''',''''YYYY-MM-DD'''')' ||''' END'||'||''''''' date_column_name,
+                                  '''''''||CASE WHEN '||COLUMN_NAME||' IS NULL THEN ''NULL'' ELSE REPLACE(TO_CHAR('||COLUMN_NAME||'),'''''''','''''''''''') END'||'||'''''''    null_column_name
+                             FROM all_tab_cols
+                             WHERE owner = p_woner
+                             AND table_name = p_table_name
+                            )
+                       GROUP BY TABLE_NAME
+                       ORDER BY TABLE_NAME) a;
+                   
+                       l_query := REPLACE(Lower(l_query),'~',',');
+                       DECLARE
+                            l_inhandler     utl_file.file_type;
+                            l_outhandle     VARCHAR2(32767);
+                            TYPE cursor_rc  IS REF cursor;
+                            l_cursor        cursor_rc;
+                            l_sql           VARCHAR2(32767);
+                            l_column_date   VARCHAR2(32767);
+                       BEGIN
+                            l_inhandler := utl_file.fopen('DIR_NAME',l_table_name||'.sql','W');
+                            l_sql := 'SELECT REPLACE(REPLACE(REPLACE('||l_query||',''''''null'''''',''NULL''),''''''to_date'',''to_date''),'''''')'''''','''''')'') column_date FROM '||p_woner||'.'||l_table_name;
+                            Dbms_Output.Put_Line(l_sql);
+                            
+                            OPEN l_cursor FOR l_sql;
+                            LOOP
+                               FETCH l_cursor INTO l_column_date;
+                               EXIT WHEN l_cursor%NOTFOUND;
+                               utl_file.put_line(l_inhandler,'INSERT INTO '||p_woner||'.'||l_table_name||' VALUES ('||l_column_date||')');
+                            END LOOP;
+                            close l_cursor;
+                            
+                       EXCEPTION WHEN NO_DATA_FOUND THEN
+                            utl_file.fclose(l_inhandler);
+                       END;
+                   END;
+                EXCEPTION WHEN OTHERS THEN 
+                   Dbms_Output.Put_Line(i.table_name);
+                END;
+           END IF;
+        EXCEPTION WHEN OTHERS THEN 
+           Dbms_Output.Put_Line(i.table_name);
+        END;
+    END LOOP;
+EXCEPTION WHEN OTHERS THEN 
+    Dbms_Output.Put_Line(SQLERRM);
+END;
+/
+
