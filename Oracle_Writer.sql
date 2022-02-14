@@ -342,8 +342,8 @@ BEGIN
                   table_name,
                   owner
               FROM all_tables
-              WHERE owner='NSHPL'
-              AND table_name IN ('ACCOUNT_BALANCE','BANK_PARAMETER')
+              WHERE owner='<<owner_name>>'
+              AND table_name IN ('<<table_name_n>>')
               ORDER BY table_name)
     LOOP
        BEGIN 
@@ -417,8 +417,8 @@ BEGIN
                   table_name,
                   owner
               FROM all_tables
-              WHERE owner='NSHPL'
-              AND table_name IN ('ACCOUNT_BALANCE','BANK_PARAMETER','BILL','BILL_DETAIL','BRANCH_PERMISSIONS','BROKER_PARAMETER','BUY_SETTLEMENT','CALENDAR_PARAMETER','CAPITAL_GAIN_DETAIL','CAPITAL_GAIN_PARA','CHART_OF_ACCOUNT','COMMISSION','COMMISSION_RATE','COMPANY_PARAMETER','COMPANY_PARAMETER_LIST','COST_CENTER','COUNTRY','COUNTRY_DETAIL','CUSTOMER_CHILD_INFO','CUSTOMER_LEDGER','CUSTOMER_REGISTRATION','CUSTOMER_REGISTRATION_DETAIL','DAILY_CERTIFICATE','DAILY_TRANSACTION','DAILY_TRANSACTION_NO','DISTRICT_PARA','FILE_LOCATION','FISCAL_YEAR_PARA','GROUP_PARAMETER','LEDGER','PAYOUT_UPLOAD','RECEIPT_PAYMENT_DETAIL','RECEIPT_PAYMENT_SLIP','REFERRED_CUSTOMER_INFO',	'SECTOR_PARAMETER','SHARE_PARAMETER','SYSTEM_PARA','TAX_PARA','VOUCHER','VOUCHER_DETAIL','VOUCHER_PARTICULARS','VOUCHER_TRANSACTION')
+              WHERE owner='<<owner_name>>'
+              AND table_name IN (<<table_name_n>>)
               ORDER BY table_name)
     LOOP
         DECLARE 
