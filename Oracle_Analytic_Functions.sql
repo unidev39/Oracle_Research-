@@ -354,3 +354,20 @@ SELECT
 120180204000    40
 120180205000    50
 */
+
+SELECT 'L0A0A0C0E0E0' word,LISTAGG(wordes, '0' ) WITHIN GROUP (ORDER BY rn )||'0' wordes 
+FROM 
+   (
+     SELECT LEVEL rn, 
+            REGEXP_SUBSTR('L0A0A0C0E0E0', '[^0]+', 1, LEVEL ) wordes,
+            row_number ( ) OVER (PARTITION BY REGEXP_SUBSTR('L0A0A0C0E0E0', '[^0]+', 1, LEVEL) ORDER BY LEVEL) rnn
+       FROM dual
+      CONNECT BY REGEXP_SUBSTR('L0A0A0C0E0E0', '[^0]+', 1, LEVEL) IS NOT NULL  
+   ) WHERE rnn =1 ;
+
+/*
+WORD       WORDES
+---------- --------   
+L0A0A0C0E0E0 L0A0C0E0
+*/
+
