@@ -36,11 +36,13 @@ BEGIN
              l_data := SubStr(l_data,InStr(l_data,'~',1,j-1)+2,InStr(l_data,'~',1,j)-InStr(l_data,'~',1,j-1));
              l_data := RTrim(l_data,'~');
        END IF;
+    /*
     l_array.extend();
     l_array(1) :=SubStr(l_data,1,InStr(l_data,'>',1,1));
     l_array.extend();
     l_array(2) := SubStr(l_data,InStr(l_data,'>',1,1)+2,InStr(l_data,'>',1,2)-(InStr(l_data,'>',1,1)));
-
+    */
+    
     FOR i IN 1..l_char_count
     LOOP
        l_array.extend();
