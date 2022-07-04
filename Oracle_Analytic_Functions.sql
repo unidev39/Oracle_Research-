@@ -371,3 +371,66 @@ WORD       WORDES
 L0A0A0C0E0E0 L0A0C0E0
 */
 
+CREATE OR REPLACE FUNCTION fn_char_count
+(
+ p_char_count NUMBER,
+ p_sn         NUMBER
+)
+RETURN NUMBER
+AS
+l_sn NUMBER;
+BEGIN
+    SELECT
+         sn INTO l_sn
+    FROM (SELECT
+               LEVEL sn
+          FROM dual
+          CONNECT BY LEVEL <=p_char_count)
+    WHERE sn=p_sn;
+    RETURN (l_sn);
+END;
+/
+
+WITH data
+AS
+(
+ SELECT 'B -> 16 -> 2078-12-28 -> C -> Guarantor ~ R -> 2 -> 2078-11-29 -> C -> Guarantor ~ R1 -> 3 -> 2078-11-30 -> C -> Guarantor ~ R2 -> 4 -> 2078-11-24 -> C -> Guarantor' col FROM dual
+)
+SELECT 
+       listagg(l_data_1,' ~ ') WITHIN GROUP (ORDER BY sn) l_data_1,
+       listagg(l_data_2,' ~ ') WITHIN GROUP (ORDER BY sn) l_data_2,
+       listagg(l_data_3,' ~ ') WITHIN GROUP (ORDER BY sn) l_data_3,
+       listagg(l_data_4,' ~ ') WITHIN GROUP (ORDER BY sn) l_data_4,
+       listagg(l_data_5,' ~ ') WITHIN GROUP (ORDER BY sn) l_data_5
+FROM (
+      SELECT
+             ROWNUM sn,
+             CASE WHEN fn_char_count(l_char_count,1)=1 THEN rtrim(SubStr(l_data,1,InStr(l_data,'>',1,1)),' ->') END  l_data_1,
+             CASE WHEN fn_char_count(l_char_count,2)=2 THEN rtrim(SubStr(l_data,InStr(l_data,'>',1,1)+2,InStr(l_data,'>',1,2)-(InStr(l_data,'>',1,1))),' ->') END l_data_2,
+             CASE WHEN fn_char_count(l_char_count,3)=3 THEN rtrim(substr(l_data,InStr(l_data,'>',1,2)+2,InStr(l_data,'>',1,3)-(InStr(l_data,'>',1,2))),' ->') END l_data_3,
+             CASE WHEN fn_char_count(l_char_count,4)=4 THEN rtrim(substr(l_data,InStr(l_data,'>',1,3)+2,InStr(l_data,'>',1,4)-(InStr(l_data,'>',1,3))),' ->') END l_data_4,
+             CASE WHEN fn_char_count(l_char_count,5)=5 THEN rtrim(substr(l_data,InStr(l_data,'>',1,4)+2,InStr(l_data,'>',1,5)-(InStr(l_data,'>',1,4))),' ->') END l_data_5
+      FROM (
+            SELECT
+                 regexp_count(words,'>')+1 l_char_count,
+                 words||' -> ' l_data
+            FROM (
+                  SELECT
+                       LEVEL rn,
+                       Trim(REGEXP_SUBSTR(l_data, '[^~]+', 1, LEVEL )) words,
+                       ROW_NUMBER ( ) OVER (PARTITION BY REGEXP_SUBSTR(l_data, '[^~]+', 1, LEVEL) ORDER BY LEVEL) rnn
+                  FROM (
+                        SELECT
+                              col l_data
+                        FROM data
+                        )
+                  CONNECT BY REGEXP_SUBSTR(l_data, '[^~]+', 1, LEVEL) IS NOT NULL
+                  ) ORDER BY rn
+            )
+       );
+
+/*
+L_DATA_1        L_DATA_2       L_DATA_3                                          L_DATA_4      L_DATA_5
+--------------- -------------- ------------------------------------------------- ------------- ---------------------------------------------
+B ~ R ~ R1 ~ R2 16 ~ 2 ~ 3 ~ 4 2078-12-28 ~ 2078-11-29 ~ 2078-11-30 ~ 2078-11-24 C ~ C ~ C ~ C Guarantor ~ Guarantor ~ Guarantor ~ Guarantor
+*/
